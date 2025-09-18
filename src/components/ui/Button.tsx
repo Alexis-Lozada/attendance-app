@@ -1,16 +1,31 @@
+"use client";
+
+import { ReactNode } from "react";
+import clsx from "clsx";
+
 interface ButtonProps {
-  text: string;
+  children: ReactNode;
   onClick?: () => void;
+  type?: "button" | "submit" | "reset";
+  className?: string;
 }
 
-export default function Button({ text, onClick }: ButtonProps) {
+export default function Button({
+  children,
+  onClick,
+  type = "button",
+  className,
+}: ButtonProps) {
   return (
     <button
-      type="submit"
+      type={type}
       onClick={onClick}
-      className="w-full bg-black text-white font-medium py-3 rounded-lg hover:bg-gray-800 transition"
+      className={clsx(
+        "h-12 w-full rounded-lg bg-[#2B2B2B] text-[#F3F3F3] text-sm md:text-base font-medium mt-2 transition-colors duration-200 hover:bg-[#3c3c3c] cursor-pointer",
+        className
+      )}
     >
-      {text}
+      {children}
     </button>
   );
 }
