@@ -3,8 +3,7 @@ import Footer from "@/components/layout/Footer";
 import Hero from "@/components/home/Hero";
 import InfoSection from "@/components/home/InfoSection";
 import QuickActions from "@/components/home/QuickActions";
-import AttendanceChart from "@/components/home/AttendanceChart";
-import PromoSection from "@/components/home/PromoSection"; // 👈 nuevo
+import PromoSection from "@/components/home/PromoSection"; 
 
 export default function HomePage() {
   return (

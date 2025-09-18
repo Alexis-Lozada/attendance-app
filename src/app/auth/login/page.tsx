@@ -5,6 +5,7 @@ import { Mail, Lock, Eye } from "lucide-react";
 import { useState } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import Navbar from "@/components/layout/Navbar";
 import Link from "next/link";
 import Footer from "@/components/layout/Footer";
 
@@ -13,6 +14,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
+        <Navbar />
+        <br></br>
       {/* Contenido principal */}
       <div className="flex flex-grow items-center justify-center">
         <div className="flex w-full max-w-5xl min-h-[600px] rounded-3xl overflow-hidden shadow-md">

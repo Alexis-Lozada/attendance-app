@@ -7,12 +7,15 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
 import Footer from "@/components/layout/Footer";
+import Navbar from "@/components/layout/Navbar";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
+        <Navbar />
+        <br></br>
       {/* Contenido principal */}
       <div className="flex flex-grow items-center justify-center">
         <div className="flex w-full max-w-5xl min-h-[650px] rounded-3xl overflow-hidden shadow-md">
