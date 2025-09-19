@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { User, Lock } from "lucide-react";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
 
 export default function LoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const slides = [
     {
@@ -31,10 +34,18 @@ export default function LoginPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000); // cambia cada 5 segundos
+    }, 5000);
 
-    return () => clearInterval(interval); // limpiar al desmontar
+    return () => clearInterval(interval);
   }, [slides.length]);
+
+  // 👇 Simulación de login
+  const handleLogin = () => {
+    setLoading(true);
+    setTimeout(() => {
+      router.push("/");
+    }, 2000);
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-50 px-4">
@@ -98,7 +109,9 @@ export default function LoginPage() {
                 icon={<Lock size={18} />}
                 allowPasswordToggle
               />
-              <Button type="submit">Ingresar</Button>
+
+              {/* 👇 Botón con loading */}
+              <Button text="Ingresar" onClick={handleLogin} loading={loading} />
             </div>
           </div>
         </div>
