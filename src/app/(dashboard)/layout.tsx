@@ -1,123 +1,65 @@
-// app/attendance/layout.tsx
 "use client";
 
+import { useState } from "react";
 import { ReactNode } from "react";
-import Link from "next/link";
-import { LayoutDashboard, Clock, Calendar, BookOpen, Settings } from "lucide-react";
-import SearchInput from "@/components/ui/SearchInput";
+import { Menu, X } from "lucide-react";
+import Sidebar from "@/components/layout/Sidebar";
 
 export default function AttendanceLayout({ children }: { children: ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="flex min-h-screen bg-gray-100 p-4 gap-4">
-      {/* Sidebar con aire */}
-      <aside className="w-64 bg-white rounded-xl flex flex-col">
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-4 py-5">
-          <div className="bg-black text-white w-8 h-8 flex items-center justify-center rounded-md font-bold">
-            R
-          </div>
-          <span className="font-medium text-lg text-gray-900">Roster</span>
-        </div>
+    <div className="bg-gray-100 min-h-screen flex">
+      {/* Sidebar escritorio */}
+      <div className="hidden md:block fixed top-4 bottom-4 left-4">
+        <Sidebar />
+      </div>
 
-        {/* Institución académica */}
+      {/* Sidebar móvil (overlay con animación) */}
+      <div
+        className={`fixed inset-0 z-40 flex md:hidden transition-opacity duration-300 ${
+          sidebarOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {/* Fondo oscuro traslúcido */}
         <div
-          className="mx-4 mb-3 rounded-lg px-3 py-3 flex items-center gap-3"
-          style={{ backgroundColor: "#FDFDFD", border: "1px solid #F0F0F0" }}
+          className="fixed inset-0 bg-gray-900/30 transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+
+        {/* Sidebar deslizable */}
+        <div
+          className={`relative w-64 bg-white rounded-r-xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         >
-          <img
-            src="/images/uteq-logo.png"
-            alt="UTEQ"
-            className="w-8 h-8 rounded-md object-contain"
-          />
-          <div className="flex flex-col min-w-0">
-            <span
-              className="text-sm font-medium text-gray-900 truncate whitespace-nowrap"
-              title="Universidad Autónoma de Querétaro"
-            >
-              Universidad Autónoma de Querétaro
-            </span>
-            <span className="text-xs text-gray-500">UTEQ</span>
-          </div>
-        </div>
-
-        {/* Buscador */}
-        <div className="px-4 py-3">
-          <SearchInput />
-        </div>
-
-        {/* Menú */}
-        <div className="px-4 mt-2 mb-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Menú
-          </span>
-        </div>
-
-        <nav className="px-2 py-2 space-y-1 text-sm">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
+          {/* Botón cerrar */}
+          <button
+            className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
+            onClick={() => setSidebarOpen(false)}
           >
-            <LayoutDashboard size={18} />
-            Dashboard
-          </Link>
-          <Link
-            href="/attendance"
-            className="flex items-center gap-2 px-3 py-2 rounded-md text-white"
-            style={{ backgroundColor: "#2B2B2B" }}
-          >
-            <Clock size={18} />
-            Asistencia
-          </Link>
-          <Link
-            href="/schedule"
-            className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-          >
-            <Calendar size={18} />
-            Horario
-          </Link>
-          <Link
-            href="/courses"
-            className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-          >
-            <BookOpen size={18} />
-            Cursos
-          </Link>
-        </nav>
+            <X size={22} />
+          </button>
 
-        {/* Otros */}
-        <div className="px-4 mt-4 mb-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Otros
-          </span>
+          <Sidebar />
         </div>
-
-        <nav className="px-2 py-2 space-y-1 text-sm">
-          <Link
-            href="/settings"
-            className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-          >
-            <Settings size={18} />
-            Configuración
-          </Link>
-        </nav>
-
-        {/* Usuario */}
-        <div className="mt-auto px-4 py-3 flex items-center gap-3">
-          <img
-            src="/images/user.jpg"
-            alt="User"
-            className="w-10 h-10 rounded-md"
-          />
-          <div>
-            <p className="text-sm font-medium text-gray-900">Alexis Lozada</p>
-            <p className="text-xs text-gray-500">Estudiante</p>
-          </div>
-        </div>
-      </aside>
+      </div>
 
       {/* Contenido principal */}
-      <main className="flex-1 bg-white rounded-xl p-6">
-        <h1 className="text-2xl font-semibold mb-6 text-gray-900">Asistencia</h1>
+      <main className="flex-1 bg-white rounded-none p-4 md:ml-72 md:mt-4 md:mr-4 md:mb-4 md:p-6 md:rounded-xl">
+        {/* Encabezado con menú hamburguesa en móvil */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Asistencia</h1>
+          <button
+            className="md:hidden p-2 text-gray-600 hover:text-gray-900"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
+        </div>
+
         {children}
       </main>
     </div>

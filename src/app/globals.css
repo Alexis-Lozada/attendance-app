@@ -36,3 +36,18 @@ select:-webkit-autofill {
   -webkit-text-fill-color: #000000 !important; /* color del texto */
   transition: background-color 5000s ease-in-out 0s; /* evitar parpadeo */
 }
+
+/* Scrollbar personalizada solo para sidebar */
+aside div.flex-1::-webkit-scrollbar {
+  width: 6px;
+}
+aside div.flex-1::-webkit-scrollbar-track {
+  background: transparent;
+}
+aside div.flex-1::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* gray-300 */
+  border-radius: 9999px;
+}
+aside div.flex-1::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af; /* gray-400 */
+}
