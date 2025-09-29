@@ -92,9 +92,9 @@ export default function AttendanceStats({
         {[...Array(30)].map((_, i) => {
           let color = "bg-gray-200"; // por defecto = pendiente
           if (i < (nOnTime / 100) * 30) {
-            color = "bg-green-200";
+            color = "bg-green-300";
           } else if (i < ((nOnTime + nLate) / 100) * 30) {
-            color = "bg-orange-200";
+            color = "bg-orange-300";
           }
 
           return (

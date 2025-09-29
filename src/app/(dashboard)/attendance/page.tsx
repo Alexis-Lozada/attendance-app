@@ -2,6 +2,8 @@
 
 import Calendar from "@/components/attendance/Calendar";
 import AttendanceStats from "@/components/attendance/AttendanceStats";
+import RiskStudents from "@/components/attendance/RiskStudents";
+import AttendanceTable from "@/components/attendance/AttendanceTable";
 
 export default function AttendancePage() {
   return (
@@ -36,9 +38,7 @@ export default function AttendancePage() {
             <h4 className="text-sm font-medium text-gray-900">
               Desarrollo Web Profesional (9IDWI)
             </h4>
-            <p className="text-xs text-gray-500">
-              9no Semestre | Grupo IDGS12
-            </p>
+            <p className="text-xs text-gray-500">9no Semestre | Grupo IDGS12</p>
           </div>
 
           {/* Columna 2: Hora */}
@@ -67,15 +67,15 @@ export default function AttendancePage() {
             diff={2.8}
             onTime={86}
             late={12}
-            pending={12}
+            pending={2}
           />
 
           {/* Estudiantes en riesgo */}
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <h3 className="text-base font-medium mb-4">Estudiantes en riesgo</h3>
-            <p className="text-gray-500 text-sm">Próximamente...</p>
-          </div>
+          <RiskStudents />
         </div>
+
+        {/* Lista de asistencia */}
+        <AttendanceTable />
       </div>
     </div>
   );
