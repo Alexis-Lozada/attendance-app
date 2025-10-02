@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
-interface InputFieldProps {
+interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   placeholder: string;
   type?: string;
@@ -17,6 +17,7 @@ export default function InputField({
   type = "text",
   icon,
   allowPasswordToggle = false,
+  ...rest
 }: InputFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -40,6 +41,7 @@ export default function InputField({
         <input
           type={inputType}
           placeholder={placeholder}
+          {...rest} // 👈 value, onChange, name, etc. se pasan aquí
           className="flex-1 outline-none text-xs md:text-sm text-[#333333] placeholder-[#ACACAC]"
         />
         {allowPasswordToggle && type === "password" && (

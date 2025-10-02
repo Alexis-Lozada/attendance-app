@@ -2,15 +2,17 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { User, Lock } from "lucide-react";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const { login, loading } = useAuth();
 
   const slides = [
     {
@@ -39,12 +41,18 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // 👇 Simulación de login
-  const handleLogin = () => {
-    setLoading(true);
-    setTimeout(() => {
-      router.push("/");
-    }, 2000);
+  // 👇 Acción del botón de login
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert("Por favor ingresa tu correo y contraseña");
+      return;
+    }
+
+    try {
+      await login(email, password); // viene del hook useAuth
+    } catch {
+      alert("Correo o contraseña inválidos");
+    }
   };
 
   return (
@@ -98,16 +106,22 @@ export default function LoginPage() {
             {/* Inputs */}
             <div className="space-y-6">
               <InputField
-                label="Matricula"
-                placeholder="Matricula"
+                label="Correo electrónico"
+                placeholder="ejemplo@correo.com"
+                type="email"
                 icon={<User size={18} />}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
+
               <InputField
                 label="Contraseña"
                 placeholder="Contraseña"
                 type="password"
                 icon={<Lock size={18} />}
                 allowPasswordToggle
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
 
               {/* 👇 Botón con loading */}
