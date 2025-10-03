@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { User, Lock } from "lucide-react";
 import InputField from "@/components/ui/InputField";
 import Button from "@/components/ui/Button";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -49,7 +49,7 @@ export default function LoginPage() {
     }
 
     try {
-      await login(email, password); // viene del hook useAuth
+      await login(email, password); // viene del AuthContext
     } catch {
       alert("Correo o contraseña inválidos");
     }
