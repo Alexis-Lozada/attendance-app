@@ -1,26 +1,30 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Layers, ChevronDown, ChevronUp, University, FolderTree, BookOpen, Users } from "lucide-react";
+import NavItem from "@/components/sidebar/NavItem";
 
-type AdminMenuProps = {
-  className?: string; // (opcional) ajustar márgenes desde fuera
-};
+type AdminMenuProps = { className?: string };
 
 export default function AdminMenu({ className = "" }: AdminMenuProps) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // refs para la línea vertical dinámica
+  // Abre automáticamente en /admin/* después de hidratar
+  useEffect(() => {
+    if (pathname.startsWith("/admin/")) setOpen(true);
+  }, [pathname]);
+
+  // Línea vertical hasta mitad del último item
   const listRef = useRef<HTMLDivElement | null>(null);
   const lastItemRef = useRef<HTMLAnchorElement | null>(null);
   const [lineHeight, setLineHeight] = useState(0);
 
   const recalc = () => {
-    const container = listRef.current;
-    const last = lastItemRef.current;
-    if (!container || !last) return;
-    const top = container.getBoundingClientRect().top;
+    const c = listRef.current, last = lastItemRef.current;
+    if (!c || !last) return;
+    const top = c.getBoundingClientRect().top;
     const lb = last.getBoundingClientRect();
     setLineHeight((lb.top - top) + lb.height / 2);
   };
@@ -40,7 +44,7 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
   return (
     <div className={className}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
       >
         <span className="flex items-center gap-2">
@@ -55,42 +59,27 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
           {/* línea vertical principal con altura dinámica (mitad de 'Grupos') */}
           <div className="absolute left-0 w-px bg-gray-300" style={{ height: lineHeight }} />
           <div className="space-y-1">
-            <Link
+            <NavItem
               href="/admin/university"
-              className="relative flex items-center gap-2 ml-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-            >
-              <span className="absolute -left-2 top-1/2 w-2 h-px bg-gray-300" />
-              <University size={18} />
-              Universidad
-            </Link>
-
-            <Link
+              icon={<University size={18} />}
+              label="Universidad"
+            />
+            <NavItem
               href="/admin/divisions"
-              className="relative flex items-center gap-2 ml-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-            >
-              <span className="absolute -left-2 top-1/2 w-2 h-px bg-gray-300" />
-              <FolderTree size={18} />
-              Divisiones
-            </Link>
-
-            <Link
+              icon={<FolderTree size={18} />}
+              label="Divisiones"
+            />
+            <NavItem
               href="/admin/programs"
-              className="relative flex items-center gap-2 ml-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-            >
-              <span className="absolute -left-2 top-1/2 w-2 h-px bg-gray-300" />
-              <BookOpen size={18} />
-              Programas
-            </Link>
-
-            <Link
+              icon={<BookOpen size={18} />}
+              label="Programas"
+            />
+            <NavItem
               href="/admin/groups"
-              ref={lastItemRef}
-              className="relative flex items-center gap-2 ml-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
-            >
-              <span className="absolute -left-2 top-1/2 w-2 h-px bg-gray-300" />
-              <Users size={18} />
-              Grupos
-            </Link>
+              icon={<Users size={18} />}
+              label="Grupos"
+              ref={lastItemRef} // <- el último para cortar la línea a la mitad
+            />
           </div>
         </div>
       )}

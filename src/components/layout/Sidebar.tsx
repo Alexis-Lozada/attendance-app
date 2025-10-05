@@ -1,26 +1,22 @@
 "use client";
 
-import Link from "next/link";
 import { LayoutDashboard, Clock, Calendar, BookOpen, Settings, LogOut } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
 import AdminMenu from "@/components/sidebar/AdminMenu";
+import NavItem from "@/components/sidebar/NavItem";
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout();
-  };
+  const handleLogout = () => logout();
 
-  // Traducción de roles
   const roleLabels: Record<string, string> = {
     ADMIN: "Administrador",
     STUDENT: "Estudiante",
     TEACHER: "Profesor",
     USER: "Usuario",
   };
-
   const roleLabel = user?.role ? roleLabels[user.role] || user.role : "Usuario";
 
   return (
@@ -55,25 +51,38 @@ export default function Sidebar() {
         </div>
 
         <nav className="space-y-1 text-sm">
-          <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-            <LayoutDashboard size={18} />
-            Dashboard
-          </Link>
+          {/* Dashboard */}
+          <NavItem
+            href="/dashboard"
+            icon={<LayoutDashboard size={18} />}
+            label="Dashboard"
+            withConnector={false}
+          />
 
+          {/* Administración */}
           <AdminMenu className="" />
 
-          <Link href="/attendance" className="flex items-center gap-2 px-3 py-2 rounded-md text-white" style={{ backgroundColor: "#2B2B2B" }}>
-            <Clock size={18} />
-            Asistencia
-          </Link>
-          <Link href="/schedule" className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-            <Calendar size={18} />
-            Horario
-          </Link>
-          <Link href="/courses" className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-            <BookOpen size={18} />
-            Cursos
-          </Link>
+          {/* Asistencia */}
+          <NavItem
+            href="/attendance"
+            icon={<Clock size={18} />}
+            label="Asistencia"
+            withConnector={false}
+          />
+
+          {/* Horario y Cursos */}
+          <NavItem
+            href="/schedule"
+            icon={<Calendar size={18} />}
+            label="Horario"
+            withConnector={false}
+          />
+          <NavItem
+            href="/courses"
+            icon={<BookOpen size={18} />}
+            label="Cursos"
+            withConnector={false}
+          />
         </nav>
 
         {/* Otros */}
@@ -82,10 +91,13 @@ export default function Sidebar() {
         </div>
 
         <nav className="space-y-1 text-sm">
-          <Link href="/settings" className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100">
-            <Settings size={18} />
-            Configuración
-          </Link>
+          <NavItem
+            href="/settings"
+            icon={<Settings size={18} />}
+            label="Configuración"
+            withConnector={false}
+          />
+
           <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 text-left cursor-pointer">
             <LogOut size={18} />
             Cerrar sesión
