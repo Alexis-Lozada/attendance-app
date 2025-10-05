@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const pageTitles: Record<string, string> = {
     "/attendance": "Asistencia",
-    "/attendance/stats": "Estadísticas de Asistencia",
+    "/admin/university": "Universidad",
     "/attendance/reports": "Reportes",
   };
   const title = pageTitles[pathname] || "Dashboard";
