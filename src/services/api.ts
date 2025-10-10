@@ -1,8 +1,11 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8081/api";
+// === URLs de microservicios ===
+const USERS_API_URL = process.env.NEXT_PUBLIC_USERS_MS_URL!;
+const ACADEMIC_API_URL = process.env.NEXT_PUBLIC_ACADEMIC_MS_URL!;
+const STORAGE_API_URL = process.env.NEXT_PUBLIC_STORAGE_MS_URL!;
 
-// obtener los tokens directamente de localStorage cuando sea necesario
+// === Helpers para tokens ===
 export const getAccessToken = () => {
   if (typeof window !== "undefined") {
     return localStorage.getItem("accessToken");
@@ -31,54 +34,58 @@ export const clearTokens = () => {
   }
 };
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+// === Instancias Axios por microservicio ===
+export const usersApi = axios.create({
+  baseURL: USERS_API_URL,
+  headers: { "Content-Type": "application/json" },
 });
 
-// Interceptor para añadir el accessToken en cada request
-api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+export const academicApi = axios.create({
+  baseURL: ACADEMIC_API_URL,
+  headers: { "Content-Type": "application/json" },
 });
 
-// Interceptor para refrescar token automáticamente
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+export const storageApi = axios.create({
+  baseURL: STORAGE_API_URL,
+  headers: { "Content-Type": "application/json" },
+});
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        originalRequest._retry = true;
-        try {
-          const { data } = await axios.post(`${API_BASE_URL}/users/refresh-token`, {
-            refreshToken,
-          });
+// === Interceptores globales para tokens ===
+const apis = [usersApi, academicApi, storageApi];
 
-          // Guardamos los nuevos tokens
-          setTokens(data.accessToken, data.refreshToken);
+apis.forEach((api) => {
+  api.interceptors.request.use((config) => {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
 
-          // Reintentamos la petición original con el nuevo accessToken
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          clearTokens();
-          if (typeof window !== "undefined") {
-            window.location.href = "/login"; // Redirige al login
+  api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        const refreshToken = getRefreshToken();
+        if (refreshToken) {
+          originalRequest._retry = true;
+          try {
+            const { data } = await usersApi.post("/users/refresh-token", {
+              refreshToken,
+            });
+            setTokens(data.accessToken, data.refreshToken);
+            originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+            return api(originalRequest);
+          } catch {
+            clearTokens();
+            if (typeof window !== "undefined") {
+              window.location.href = "/login";
+            }
           }
         }
       }
+      return Promise.reject(error);
     }
-
-    return Promise.reject(error);
-  }
-);
-
-export default api;
+  );
+});
