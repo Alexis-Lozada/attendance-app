@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const router = useRouter();
 
-  // cargar tokens y usuario del localStorage al iniciar
+  // Cargar tokens y usuario del localStorage al iniciar
   useEffect(() => {
     const storedAccess = localStorage.getItem("accessToken");
     const storedRefresh = localStorage.getItem("refreshToken");
@@ -50,9 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("user", JSON.stringify(user)); // 👈 guardar usuario
+      localStorage.setItem("user", JSON.stringify(user));
 
-      router.push("/"); // redirigir tras login
+      router.push("/");
     } finally {
       setLoading(false);
     }
@@ -64,14 +64,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn("Error al cerrar sesión en backend:", e);
     }
+
+    // Limpiar sesión
     setUser(null);
     setAccessToken(null);
     setRefreshToken(null);
+
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
 
-    router.push("/login"); // redirigir al login tras logout
+    // 🔹 Limpieza del tema desde aquí (sin useTheme)
+    localStorage.removeItem("themeColor");
+    document.documentElement.style.setProperty("--primary-color", "#3B82F6");
+
+    router.push("/login");
   };
 
   return (

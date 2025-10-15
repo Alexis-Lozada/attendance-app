@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -20,8 +21,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={poppins.className}>
-        {/* toda la app tiene acceso a useAuth */}
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

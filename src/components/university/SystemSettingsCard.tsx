@@ -43,6 +43,7 @@ export default function SystemSettingsCard() {
           Porcentaje mínimo de asistencia para acreditar
         </label>
         <div className="flex items-center gap-3">
+          {/* Usa accent-primary para el color dinámico del slider */}
           <input
             type="range"
             min="50"
@@ -50,7 +51,7 @@ export default function SystemSettingsCard() {
             step="1"
             value={minAttendance}
             onChange={(e) => setMinAttendance(Number(e.target.value))}
-            className="flex-1 accent-[#2B2B2B] cursor-pointer"
+            className="flex-1 accent-primary cursor-pointer"
           />
           <input
             type="number"
@@ -75,7 +76,7 @@ export default function SystemSettingsCard() {
           <input
             type="date"
             onChange={handleAddDate}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#2B2B2B]"
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -112,10 +113,7 @@ export default function SystemSettingsCard() {
       <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
-          className="text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition"
-          style={{
-            backgroundColor: "#2B2B2B",
-          }}
+          className="bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition  cursor-pointer"
         >
           Guardar cambios
         </button>

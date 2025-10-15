@@ -66,7 +66,7 @@ apis.forEach((api) => {
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (error.response?.status === 403 && !originalRequest._retry) {
         const refreshToken = getRefreshToken();
         if (refreshToken) {
           originalRequest._retry = true;

@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Palette, Check, Plus } from "lucide-react";
-
-interface Props {
-  initialColor?: string;
-  onColorSelect?: (color: string) => void;
-}
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { updateUniversityThemeColor } from "@/services/configuration.service";
 
 const presetColors = [
   { name: "Morado", value: "#8B5CF6" },
@@ -16,23 +14,40 @@ const presetColors = [
   { name: "Naranja", value: "#F97316" },
 ];
 
-export default function ThemeColorCard({ initialColor, onColorSelect }: Props) {
-  const [selected, setSelected] = useState(initialColor || "#3B82F6");
+export default function ThemeColorCard() {
+  const { color, setColor } = useTheme();
+  const { user } = useAuth();
+  const [selected, setSelected] = useState(color);
   const [customColor, setCustomColor] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSelected(color);
+  }, [color]);
 
   const handleSelect = (color: string) => {
     setSelected(color);
-    onColorSelect?.(color);
+    setColor(color);
   };
 
   const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const color = e.target.value;
-    setCustomColor(color);
-    handleSelect(color);
+    const newColor = e.target.value;
+    setCustomColor(newColor);
+    handleSelect(newColor);
   };
 
-  const handleSave = () => {
-    console.log("Color guardado:", selected);
+  const handleSave = async () => {
+    if (!user?.idUniversity) return alert("No se pudo determinar la universidad del usuario");
+    setSaving(true);
+    try {
+      await updateUniversityThemeColor(user.idUniversity, selected);
+      alert("Color de tema actualizado correctamente ✅");
+    } catch (error) {
+      console.error("Error al guardar color:", error);
+      alert("Error al guardar el color ❌");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -49,32 +64,32 @@ export default function ThemeColorCard({ initialColor, onColorSelect }: Props) {
         Personaliza tu dashboard seleccionando un color principal o define uno manualmente.
       </p>
 
-      {/* Paleta de colores */}
+      {/* Paleta */}
       <div className="flex items-center gap-4 flex-wrap mb-6">
-        {presetColors.map((color) => {
-          const isSelected = selected === color.value;
+        {presetColors.map((colorItem) => {
+          const isSelected = selected === colorItem.value;
           return (
             <button
-              key={color.value}
-              onClick={() => handleSelect(color.value)}
+              key={colorItem.value}
+              onClick={() => handleSelect(colorItem.value)}
               className="relative w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer border transition-all duration-150"
               style={
                 isSelected
                   ? {
-                      backgroundColor: color.value,
-                      boxShadow: `0 0 0 3px white, 0 0 0 5px ${color.value}`,
+                      backgroundColor: colorItem.value,
+                      boxShadow: `0 0 0 3px white, 0 0 0 5px ${colorItem.value}`,
                       borderColor: "transparent",
                     }
-                  : { backgroundColor: color.value, borderColor: "#E5E7EB" }
+                  : { backgroundColor: colorItem.value, borderColor: "#E5E7EB" }
               }
-              title={color.name}
+              title={colorItem.name}
             >
               {isSelected && <Check className="text-white w-5 h-5" strokeWidth={3} />}
             </button>
           );
         })}
 
-        {/* Opción para seleccionar color personalizado */}
+        {/* Color personalizado */}
         <label
           className="relative w-10 h-10 rounded-lg border border-dashed border-gray-300 flex items-center justify-center cursor-pointer transition-all duration-150"
           title="Seleccionar color personalizado"
@@ -87,7 +102,6 @@ export default function ThemeColorCard({ initialColor, onColorSelect }: Props) {
           />
         </label>
 
-        {/* Color personalizado elegido */}
         {customColor && (
           <div
             onClick={() => handleSelect(customColor)}
@@ -108,16 +122,17 @@ export default function ThemeColorCard({ initialColor, onColorSelect }: Props) {
         )}
       </div>
 
-      {/* Botón Guardar con color dinámico */}
+      {/* Botón Guardar */}
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition"
-          style={{
-            backgroundColor: selected,
-          }}
+          disabled={saving}
+          className={`text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition ${
+            saving ? "opacity-60 cursor-not-allowed" : "hover:brightness-95"
+          }`}
+          style={{ backgroundColor: selected }}
         >
-          Guardar cambios
+          {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
     </div>
