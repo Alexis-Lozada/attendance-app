@@ -50,15 +50,44 @@ export default function UniversityPage() {
     return <p className="text-red-500">No se pudo cargar la universidad.</p>;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <aside className="space-y-6 min-w-[240px] flex-shrink-0 lg:w-1/4">
-        <SystemSettingsCard />
-      </aside>
+    <div className="flex flex-col gap-8">
+      {/* === Encabezado con info de la universidad === */}
+      <UniversityDetailsCard university={university} />
 
-      <main className="flex-1 space-y-6">
-        <UniversityDetailsCard initialData={university} onSave={setUniversity} />
-        <ThemeColorCard />
-      </main>
+      {/* === Contenido principal (dos columnas) === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Columna izquierda - Configuración del sistema */}
+        <section className="space-y-2">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Configuración del sistema
+            </h3>
+            <p className="text-sm text-gray-500">
+              Ajusta los parámetros de operación del sistema, como reportes y
+              correos automáticos.
+            </p>
+          </div>
+          <div>
+            <SystemSettingsCard />
+          </div>
+        </section>
+
+        {/* Columna derecha - Tema visual */}
+        <section className="space-y-2">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Personalización del tema
+            </h3>
+            <p className="text-sm text-gray-500">
+              Cambia los colores y apariencia de la plataforma para reflejar la
+              identidad visual de tu institución.
+            </p>
+          </div>
+          <div>
+            <ThemeColorCard />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

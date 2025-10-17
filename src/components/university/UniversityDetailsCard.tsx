@@ -1,51 +1,29 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { Edit3 } from "lucide-react";
 import { University } from "@/types/university";
-import { Building2, Upload } from "lucide-react";
-import { updateUniversityWithLogo } from "@/services/university.service";
-import { useAuth } from "@/context/AuthContext";
+import Modal from "@/components/ui/Modal";
+import UniversityEditForm from "@/components/university/UniversityEditForm";
 import Toast from "@/components/ui/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { getLogoUrl, updateUniversityWithLogo } from "@/services/university.service";
 
 interface Props {
-  initialData: University;
-  onSave: (data: University) => void;
+  university: University;
 }
 
-export default function UniversityDetailsCard({ initialData, onSave }: Props) {
+export default function UniversityDetailsCard({ university }: Props) {
   const { user } = useAuth();
-  const [university, setUniversity] = useState<University>(initialData);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentData, setCurrentData] = useState(university);
   const [toast, setToast] = useState<{
     title: string;
     description?: string;
     type: "success" | "error";
   } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const inputBase =
-    "w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-gray-400 focus:outline-none";
-
-  const handleChange = (field: keyof University, value: string) => {
-    setUniversity((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSelectedFile(file);
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setUniversity((prev) => ({ ...prev, logo: result }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSave = async () => {
+  const handleSave = async (data: University, selectedFile?: File) => {
     if (!user?.idUniversity) {
       setToast({
         title: "Error",
@@ -55,19 +33,34 @@ export default function UniversityDetailsCard({ initialData, onSave }: Props) {
       return;
     }
 
-    setLoading(true);
     try {
+      // 1️⃣ Guardar cambios en el backend
       const updated = await updateUniversityWithLogo(
         user.idUniversity,
-        university,
-        selectedFile || undefined
+        data,
+        selectedFile
       );
-      onSave(updated);
+
+      // 2️⃣ Obtener la URL real del logo si es necesario
+      let logoUrl = updated.logo;
+      if (updated.logo && !updated.logo.startsWith("http")) {
+        const url = await getLogoUrl(updated.logo);
+        if (url) logoUrl = url;
+      }
+
+      // 3️⃣ Actualizar los datos en la vista
+      setCurrentData({
+        ...updated,
+        logo: logoUrl,
+      });
+
+      // 4️⃣ Mostrar mensaje y cerrar modal
       setToast({
         title: "Universidad actualizada",
         description: "Los cambios se guardaron correctamente.",
         type: "success",
       });
+      setIsModalOpen(false);
     } catch (error) {
       console.error("Error actualizando universidad:", error);
       setToast({
@@ -75,8 +68,6 @@ export default function UniversityDetailsCard({ initialData, onSave }: Props) {
         description: "No se pudieron aplicar los cambios.",
         type: "error",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -91,102 +82,64 @@ export default function UniversityDetailsCard({ initialData, onSave }: Props) {
         />
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        {/* Encabezado */}
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-200 bg-white">
-            <Building2 className="w-4 h-4 text-gray-700" />
-          </div>
-          <h3 className="text-sm font-medium text-gray-900">
-            Detalles de Universidad
-          </h3>
-        </div>
-
-        {/* Contenido */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Logo */}
-          <div className="flex flex-col items-center justify-center md:col-span-1">
-            <div className="w-24 h-24 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
-              {university.logo ? (
-                <img
-                  src={university.logo}
-                  alt="Logo Universidad"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <Building2 className="w-10 h-10 text-gray-400" />
-              )}
-            </div>
-
-            <div className="mt-3 flex flex-col items-center">
-              <p className="text-xs text-gray-500 mb-1">Logo institucional</p>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-medium text-gray-700 border border-gray-200 rounded-md px-3 py-1.5 flex items-center gap-1 hover:bg-gray-100 transition"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                Subir imagen
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoChange}
+      <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Izquierda: Logo + Información */}
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden">
+            {currentData.logo ? (
+              <img
+                src={currentData.logo}
+                alt="Logo universidad"
+                className="w-full h-full object-contain"
               />
-            </div>
+            ) : (
+              <div className="text-gray-400 text-sm">Sin logo</div>
+            )}
           </div>
 
-          {/* Campos */}
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { label: "Nombre", field: "name" },
-              { label: "Código", field: "code" },
-              { label: "Campus", field: "campus" },
-              { label: "Dirección", field: "address" },
-            ].map(({ label, field }) => (
-              <div key={field}>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  {label}
-                </label>
-                <input
-                  type="text"
-                  value={university[field as keyof University] as string}
-                  onChange={(e) =>
-                    handleChange(field as keyof University, e.target.value)
-                  }
-                  className={inputBase}
-                />
-              </div>
-            ))}
-
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Correo institucional
-              </label>
-              <input
-                type="email"
-                value={university.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                className={inputBase}
-              />
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              {currentData.name}
+              <span className="text-xs text-gray-500 font-normal">
+                ({currentData.code})
+              </span>
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {currentData.campus} • {currentData.address}
+            </p>
+            <a
+              href={`mailto:${currentData.email}`}
+              className="text-sm text-primary hover:underline mt-1 block"
+            >
+              {currentData.email}
+            </a>
           </div>
         </div>
 
-        {/* Botón Guardar */}
-        <div className="flex justify-end mt-6">
+        {/* Derecha: solo botón Editar */}
+        <div className="flex items-center gap-3 self-end md:self-auto">
           <button
-            onClick={handleSave}
-            disabled={loading}
-            className={`bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg transition ${
-              loading ? "opacity-60 cursor-not-allowed" : "hover:brightness-95"
-            }`}
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md px-3 py-2 hover:bg-gray-100 transition"
           >
-            {loading ? "Guardando..." : "Guardar cambios"}
+            <Edit3 className="w-4 h-4" />
+            Editar
           </button>
         </div>
       </div>
+
+      {/* Modal */}
+      <Modal
+        title="Editar información de la universidad"
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      >
+        <UniversityEditForm
+          initialData={currentData}
+          onSave={handleSave}
+          onCancel={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </>
   );
 }
