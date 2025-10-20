@@ -4,6 +4,7 @@ import axios from "axios";
 const USERS_API_URL = process.env.NEXT_PUBLIC_USERS_MS_URL!;
 const ACADEMIC_API_URL = process.env.NEXT_PUBLIC_ACADEMIC_MS_URL!;
 const STORAGE_API_URL = process.env.NEXT_PUBLIC_STORAGE_MS_URL!;
+const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_MS_URL!;
 
 // === Helpers para tokens ===
 export const getAccessToken = () => {
@@ -50,15 +51,18 @@ export const storageApi = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+export const chatApi = axios.create({
+  baseURL: CHAT_API_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
 // === Interceptores globales para tokens ===
-const apis = [usersApi, academicApi, storageApi];
+const apis = [usersApi, academicApi, storageApi, chatApi]; // 🆕 agregado
 
 apis.forEach((api) => {
   api.interceptors.request.use((config) => {
     const token = getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
 
@@ -71,9 +75,7 @@ apis.forEach((api) => {
         if (refreshToken) {
           originalRequest._retry = true;
           try {
-            const { data } = await usersApi.post("/users/refresh-token", {
-              refreshToken,
-            });
+            const { data } = await usersApi.post("/users/refresh-token", { refreshToken });
             setTokens(data.accessToken, data.refreshToken);
             originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
             return api(originalRequest);

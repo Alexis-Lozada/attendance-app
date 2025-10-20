@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
+import ChatPanel from "@/components/chat/ChatPanel";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,16 +57,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Contenido principal */}
-      <main className="flex-1 bg-white rounded-none p-4 md:ml-72 md:mt-4 md:mr-4 md:mb-4 md:p-6 md:rounded-xl">
-        {/* Encabezado con menú hamburguesa en móvil */}
-        <div className="flex items-center justify-between mb-6">
+      <main className="flex-1 bg-white rounded-none p-4 md:ml-72 md:mt-4 md:mr-4 md:mb-4 md:p-6 md:rounded-xl relative">
+        <div className="flex items-center justify-between mb-6 relative">
           <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-          <button
-            className="md:hidden p-2 text-gray-600 hover:text-gray-900"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
+
+          {/* Chat Panel */}
+          <div className="flex items-center gap-3">
+            <ChatPanel />
+            <button
+              className="md:hidden p-2 text-gray-600 hover:text-gray-900"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+          </div>
         </div>
 
         {children}
