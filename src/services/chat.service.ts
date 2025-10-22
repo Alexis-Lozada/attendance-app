@@ -5,6 +5,7 @@ export interface ConversationDTO {
   id: number;
   title: string;
   type: "PRIVATE" | "GROUP";
+  avatar?: string; 
   createdAt: string;
 }
 
