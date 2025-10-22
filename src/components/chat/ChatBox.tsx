@@ -1,7 +1,9 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Send } from "lucide-react";
 import { getMessages, sendMessage } from "@/services/chat.service";
+import { getFileUrl } from "@/services/storage.service";
 import { useAuth } from "@/context/AuthContext";
 
 interface Props {
@@ -21,12 +23,24 @@ export default function ChatBox({ conversationId, title, onBack }: Props) {
   useEffect(() => {
     setLoading(true);
     getMessages(conversationId)
-      .then((data) => setMessages(data))
+      .then(async (data) => {
+        // 🔁 Resolver URLs de avatares (usa caché global)
+        const resolvedMessages = await Promise.all(
+          data.map(async (msg) => {
+            if (msg.senderAvatar) {
+              const url = await getFileUrl(msg.senderAvatar);
+              return { ...msg, senderAvatarUrl: url };
+            }
+            return { ...msg, senderAvatarUrl: null };
+          })
+        );
+        setMessages(resolvedMessages);
+      })
       .catch((err) => console.error("Error cargando mensajes:", err))
       .finally(() => setLoading(false));
   }, [conversationId]);
 
-  // === Auto-scroll ===
+  // === Auto-scroll al final ===
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -54,7 +68,7 @@ export default function ChatBox({ conversationId, title, onBack }: Props) {
         w-80 md:w-96
         bg-white border border-gray-200 rounded-xl shadow-2xl
         flex flex-col overflow-hidden
-        max-h-[calc(100vh-10rem)]   /* ✅ límite más bajo */
+        max-h-[calc(100vh-10rem)]
         z-[100]
       "
     >
@@ -72,30 +86,66 @@ export default function ChatBox({ conversationId, title, onBack }: Props) {
       {/* === Mensajes === */}
       <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
         {loading ? (
-          <p className="text-sm text-gray-500 text-center">Cargando mensajes...</p>
+          <p className="text-sm text-gray-500 text-center">
+            Cargando mensajes...
+          </p>
         ) : messages.length === 0 ? (
           <p className="text-sm text-gray-500 text-center">
             No hay mensajes aún. ¡Escribe el primero!
           </p>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${
-                msg.senderId === user?.idUser ? "justify-end" : "justify-start"
-              }`}
-            >
+          messages.map((msg) => {
+            const isMine = msg.senderId === user?.idUser;
+            const time = new Date(msg.sentAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
+            return (
               <div
-                className={`px-3 py-2 rounded-lg text-sm max-w-[75%] ${
-                  msg.senderId === user?.idUser
-                    ? "bg-primary text-white"
-                    : "bg-white text-gray-800 border border-gray-200"
-                }`}
+                key={msg.id}
+                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
               >
-                {msg.content}
+                {/* Avatar (solo para mensajes de otros usuarios) */}
+                {!isMine && (
+                  <img
+                    src={msg.senderAvatarUrl || "/default-avatar.png"}
+                    alt={msg.senderName || "Usuario"}
+                    className="w-8 h-8 rounded-full mr-2 border border-gray-300 object-cover"
+                  />
+                )}
+
+                <div className="flex flex-col max-w-[75%]">
+                  {/* Nombre del remitente */}
+                  {!isMine && (
+                    <span className="text-xs text-gray-600 mb-1 font-medium">
+                      {msg.senderName || "Usuario"}
+                    </span>
+                  )}
+
+                  {/* Burbuja del mensaje */}
+                  <div
+                    className={`px-3 py-2 rounded-lg text-sm break-words ${
+                      isMine
+                        ? "bg-primary text-white self-end"
+                        : "bg-white text-gray-800 border border-gray-200"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+
+                  {/* Hora */}
+                  <span
+                    className={`text-[10px] text-gray-400 mt-1 ${
+                      isMine ? "self-end" : "self-start"
+                    }`}
+                  >
+                    {time}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -109,7 +159,7 @@ export default function ChatBox({ conversationId, title, onBack }: Props) {
           placeholder="Escribe un mensaje..."
           className="flex-1 px-3 py-2 text-sm border rounded-lg text-gray-800
                      focus:outline-none focus:ring-2 focus:ring-primary placeholder-gray-400"
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
         />
         <button
           onClick={handleSend}
