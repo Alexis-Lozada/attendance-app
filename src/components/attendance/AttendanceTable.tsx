@@ -1,6 +1,6 @@
 "use client";
 
-import { List } from "lucide-react";
+import { List, IdCard, CaseSensitive, Sigma, Percent, Loader } from "lucide-react";
 
 interface Student {
   id: string;
@@ -23,30 +23,30 @@ const students: Student[] = [
     status: "Presente",
   },
   {
-    id: "#2023171015",
-    name: "Alexis Lozada",
+    id: "#2023171016",
+    name: "Juan Pérez",
     photo: "/images/user.jpg",
-    absences: 3,
-    remaining: 1,
-    attendance: 88,
+    absences: 5,
+    remaining: 2,
+    attendance: 70,
     status: "Ausente",
   },
   {
-    id: "#2023171015",
-    name: "Alexis Lozada",
+    id: "#2023171017",
+    name: "María Gómez",
     photo: "/images/user.jpg",
-    absences: 3,
-    remaining: 1,
-    attendance: 88,
+    absences: 1,
+    remaining: 0,
+    attendance: 95,
     status: "Justificado",
   },
   {
-    id: "#2023171015",
-    name: "Alexis Lozada",
+    id: "#2023171018",
+    name: "Luis Hernández",
     photo: "/images/user.jpg",
-    absences: 3,
+    absences: 2,
     remaining: 1,
-    attendance: 88,
+    attendance: 80,
     status: "Retardo",
   },
 ];
@@ -63,24 +63,44 @@ export default function AttendanceTable() {
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left border-collapse">
-          <thead>
-            <tr className="text-xs text-gray-500 border-b">
-              <th className="p-2">
+      <div className="overflow-x-auto rounded-md border border-gray-200">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-gray-50">
+            <tr className="text-sm text-gray-500 border-b border-gray-200">
+              <th className="p-2 font-normal">
                 <input type="checkbox" />
               </th>
-              <th className="p-2">Matrícula</th>
-              <th className="p-2">Nombre</th>
-              <th className="p-2">Faltas totales</th>
-              <th className="p-2">% Asistencias</th>
-              <th className="p-2">Status</th>
-              <th className="p-2"></th>
+              <th className="p-2 font-normal">
+                <div className="flex items-center gap-1">
+                  <IdCard className="w-4 h-4" /> Matrícula
+                </div>
+              </th>
+              <th className="p-2 font-normal">
+                <div className="flex items-center gap-1">
+                  <CaseSensitive className="w-4 h-4" /> Nombre
+                </div>
+              </th>
+              <th className="p-2 font-normal">
+                <div className="flex items-center gap-1">
+                  <Sigma className="w-4 h-4" /> Faltas totales
+                </div>
+              </th>
+              <th className="p-2 font-normal">
+                <div className="flex items-center gap-1">
+                  <Percent className="w-4 h-4" /> Asistencias
+                </div>
+              </th>
+              <th className="p-2 font-normal">
+                <div className="flex items-center gap-1">
+                  <Loader className="w-4 h-4" /> Status
+                </div>
+              </th>
+              <th className="p-2 font-normal"></th>
             </tr>
           </thead>
           <tbody>
             {students.map((s, i) => (
-              <tr key={i} className="border-b last:border-0">
+              <tr key={i} className="border-b border-gray-200 last:border-0">
                 <td className="p-2">
                   <input type="checkbox" />
                 </td>

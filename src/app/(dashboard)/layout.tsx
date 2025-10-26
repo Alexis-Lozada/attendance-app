@@ -13,7 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitles: Record<string, string> = {
     "/attendance": "Asistencia",
     "/admin/university": "Universidad",
-    "/attendance/reports": "Reportes",
+    "/admin/divisions": "Divisiones",
   };
   const title = pageTitles[pathname] || "Dashboard";
 
@@ -57,7 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Contenido principal */}
-      <main className="flex-1 bg-white rounded-none p-4 md:ml-72 md:mt-4 md:mr-4 md:mb-4 md:p-6 md:rounded-xl relative">
+      <main className="flex-1 bg-white rounded-none p-4 md:ml-72 md:mt-4 md:mr-4 md:mb-4 md:p-6 md:rounded-xl relative overflow-x-auto">
         <div className="flex items-center justify-between mb-6 relative">
           <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
 

@@ -1,82 +1,165 @@
 "use client";
 
-import Calendar from "@/components/attendance/Calendar";
-import AttendanceStats from "@/components/attendance/AttendanceStats";
-import RiskStudents from "@/components/attendance/RiskStudents";
-import AttendanceTable from "@/components/attendance/AttendanceTable";
+import { useEffect, useState } from "react";
+import Table, { TableColumn } from "@/components/ui/Table";
+import Switch from "@/components/ui/Switch";
+import { useAuth } from "@/context/AuthContext";
+import { getDivisionsByUniversity } from "@/services/division.service";
+import type { Division } from "@/components/divisions/DivisionsTypes";
+import {
+  Type,
+  Building2,
+  FileText,
+  SlidersHorizontal,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Plus,
+} from "lucide-react";
 
-export default function AttendancePage() {
+export default function DivisionsPage() {
+  const { user } = useAuth();
+  const [divisions, setDivisions] = useState<Division[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState(""); // 🔹 Estado de búsqueda
+  const divisionsPerPage = 5;
+
+  useEffect(() => {
+    if (!user?.idUniversity) return;
+
+    const loadDivisions = async () => {
+      try {
+        setLoading(true);
+        const data = await getDivisionsByUniversity(user.idUniversity);
+        const mappedDivisions: Division[] = data.map((d) => ({
+          id: d.idDivision,
+          idUniversity: d.idUniversity,
+          code: d.code,
+          name: d.name,
+          description: d.description,
+          status: d.status,
+        }));
+        setDivisions(mappedDivisions);
+      } catch (error) {
+        console.error("Error al cargar divisiones:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDivisions();
+  }, [user?.idUniversity]);
+
+  if (!user) return <p className="text-gray-500">Iniciando sesión...</p>;
+  if (loading) return <p className="text-gray-500">Cargando divisiones...</p>;
+
+  // 🔍 Buscar solo por los campos relevantes
+  const filteredDivisions = divisions.filter((d) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      d.code?.toLowerCase().includes(term) ||
+      d.name?.toLowerCase().includes(term) ||
+      d.description?.toLowerCase().includes(term)
+    );
+  });
+
+  // 🔹 Calcular paginación sobre los datos filtrados
+  const totalPages = Math.ceil(filteredDivisions.length / divisionsPerPage);
+  const indexOfLast = currentPage * divisionsPerPage;
+  const indexOfFirst = indexOfLast - divisionsPerPage;
+  const currentDivisions = filteredDivisions.slice(indexOfFirst, indexOfLast);
+
+  const columns: TableColumn<Division>[] = [
+    { key: "code", label: "Código Académico", icon: <Type size={16} /> },
+    { key: "name", label: "Nombre de División", icon: <Building2 size={16} /> },
+    { key: "description", label: "Descripción", icon: <FileText size={16} /> },
+    {
+      key: "status",
+      label: "Status",
+      icon: <SlidersHorizontal size={16} />,
+      align: "center",
+      render: (item) => (
+        <div className="flex justify-center">
+          <Switch
+            checked={item.status}
+            onChange={() =>
+              setDivisions((prev) =>
+                prev.map((d) =>
+                  d.id === item.id ? { ...d, status: !d.status } : d
+                )
+              )
+            }
+          />
+        </div>
+      ),
+    },
+    {
+      key: "acciones",
+      label: "Acciones",
+      icon: <MoreVertical size={16} />,
+      align: "center",
+      render: () => (
+        <div className="flex justify-center gap-3">
+          <button
+            title="Editar"
+            className="text-gray-600 hover:text-primary transition"
+          >
+            <Edit2 size={15} />
+          </button>
+          <button
+            title="Eliminar"
+            className="text-gray-600 hover:text-red-500 transition"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  // 🔹 handler temporal del botón agregar
+  const handleAddDivision = () => {
+    alert("Abrir modal para agregar nueva división (pendiente)");
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      {/* Columna izquierda */}
-      <div className="space-y-6 min-w-[240px] flex-shrink-0 lg:w-1/4">
-        <Calendar />
-
-        {/* Filtros */}
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h4 className="text-sm font-medium mb-2">Curso</h4>
-          <p className="text-sm text-gray-600">
-            Desarrollo Web Profesional (9IDWI)
+    <div className="flex flex-col gap-8">
+      {/* === Header con título, descripción y botón === */}
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+          <h3 className="text-[15px] font-semibold text-gray-900">
+            Lista de divisiones
+          </h3>
+          <p className="text-[13px] text-gray-500">
+            Aquí puedes visualizar las divisiones activas o inactivas dentro del sistema académico.
           </p>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h4 className="text-sm font-medium mb-2">Semestre</h4>
-          <p className="text-sm text-gray-600">9no Cuatrimestre</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h4 className="text-sm font-medium mb-2">Grupo</h4>
-          <p className="text-sm text-gray-600">IDGS12</p>
-        </div>
-      </div>
 
-      {/* Columna derecha */}
-      <div className="flex-1 space-y-6">
-        {/* Contenedor con curso, hora y botón */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          {/* Columna 1: Curso */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-900">
-              Desarrollo Web Profesional (9IDWI)
-            </h4>
-            <p className="text-xs text-gray-500">9no Semestre | Grupo IDGS12</p>
-          </div>
+        <button
+          onClick={handleAddDivision}
+          className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-lg flex items-center justify-center gap-2 transition-all hover:brightness-95 text-sm font-medium"
+        >
+          <Plus size={18} />
+          <span>Nueva división</span>
+        </button>
+      </header>
 
-          {/* Columna 2: Hora */}
-          <div className="md:border-l md:border-gray-200 md:pl-4">
-            <h4 className="text-sm font-medium text-gray-900">
-              Hora - 10:00 AM a 10:45 AM
-            </h4>
-            <p className="text-xs text-gray-500">
-              Semana 3 - Martes 17 de enero 2020
-            </p>
-          </div>
-
-          {/* Columna 3: Botón */}
-          <div>
-            <button className="bg-[#2B2B2B] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#3c3c3c] transition">
-              Pasar Asistencia
-            </button>
-          </div>
-        </div>
-
-        {/* Grid de estadísticas y estudiantes en riesgo */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Estadísticas de asistencia */}
-          <AttendanceStats
-            rate={89.2}
-            diff={2.8}
-            onTime={86}
-            late={12}
-            pending={2}
-          />
-
-          {/* Estudiantes en riesgo */}
-          <RiskStudents />
-        </div>
-
-        {/* Lista de asistencia */}
-        <AttendanceTable />
-      </div>
+      {/* === Tabla === */}
+      <section className="space-y-2">
+        <Table
+          title="Divisiones Académicas Vigentes"
+          columns={columns}
+          data={currentDivisions}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          currentItemsCount={currentDivisions.length}
+          totalItemsCount={filteredDivisions.length}
+          onPreviousPage={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+          onNextPage={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+          onSearch={setSearchTerm} // 🔹 Conecta el buscador
+        />
+      </section>
     </div>
   );
 }
