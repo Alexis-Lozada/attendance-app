@@ -50,7 +50,7 @@ export default function Toast({
           : 'translate-x-10 opacity-0 scale-95'
       }`}
     >
-      <div className="flex items-start gap-3 px-4 py-4 rounded-lg bg-white border border-gray-200 shadow-md shadow-gray-200/60 backdrop-blur-sm">
+      <div className="flex items-start gap-3 px-4 py-4 rounded-lg bg-white border border-gray-200">
         <div className="pt-1">{styles[type].icon}</div>
         <div className="flex flex-col flex-1">
           <p className="text-sm font-medium text-gray-900">{title}</p>
