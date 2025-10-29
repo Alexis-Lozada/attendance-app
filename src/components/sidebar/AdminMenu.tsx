@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Layers, ChevronDown, ChevronUp, University, FolderTree, BookOpen, Users } from "lucide-react";
+import { Layers, ChevronDown, ChevronUp, University, FolderTree, BookOpen, Users, UserPlus2 } from "lucide-react";
 import NavItem from "@/components/sidebar/NavItem";
 
 type AdminMenuProps = { className?: string };
@@ -73,6 +73,11 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
               href="/admin/programs"
               icon={<BookOpen size={18} />}
               label="Programas"
+            />
+            <NavItem
+              href="/admin/users"
+              icon={<UserPlus2 size={18} />}
+              label="Usuarios"
             />
             <NavItem
               href="/admin/groups"
