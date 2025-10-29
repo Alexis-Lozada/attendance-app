@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { LayoutDashboard, Clock, Calendar, BookOpen, Settings, LogOut } from "lucide-react";
 import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
@@ -30,10 +31,18 @@ export default function Sidebar() {
         </div>
 
         {/* Institución académica */}
-        <div className="mx-4 mb-3 rounded-lg px-3 py-3 flex items-center gap-3" style={{ backgroundColor: "#FDFDFD", border: "1px solid #F0F0F0" }}>
+        <div
+          className="mx-4 mb-3 rounded-lg px-3 py-3 flex items-center gap-3"
+          style={{ backgroundColor: "#FDFDFD", border: "1px solid #F0F0F0" }}
+        >
           <img src="/images/uteq-logo.png" alt="UTEQ" className="w-8 h-8 rounded-md object-contain" />
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-gray-900 truncate whitespace-nowrap" title="Universidad Autónoma de Querétaro">Universidad Autónoma de Querétaro</span>
+            <span
+              className="text-sm font-medium text-gray-900 truncate whitespace-nowrap"
+              title="Universidad Autónoma de Querétaro"
+            >
+              Universidad Autónoma de Querétaro
+            </span>
             <span className="text-xs text-gray-500">UTEQ</span>
           </div>
         </div>
@@ -51,62 +60,34 @@ export default function Sidebar() {
         </div>
 
         <nav className="space-y-1 text-sm">
-          {/* Dashboard */}
-          <NavItem
-            href="/dashboard"
-            icon={<LayoutDashboard size={18} />}
-            label="Dashboard"
-            withConnector={false}
-          />
-
-          {/* Administración */}
+          <NavItem href="/dashboard" icon={<LayoutDashboard size={18} />} label="Dashboard" withConnector={false} />
           <AdminMenu className="" />
-
-          {/* Asistencia */}
-          <NavItem
-            href="/attendance"
-            icon={<Clock size={18} />}
-            label="Asistencia"
-            withConnector={false}
-          />
-
-          {/* Horario y Cursos */}
-          <NavItem
-            href="/schedule"
-            icon={<Calendar size={18} />}
-            label="Horario"
-            withConnector={false}
-          />
-          <NavItem
-            href="/courses"
-            icon={<BookOpen size={18} />}
-            label="Cursos"
-            withConnector={false}
-          />
+          <NavItem href="/attendance" icon={<Clock size={18} />} label="Asistencia" withConnector={false} />
+          <NavItem href="/schedule" icon={<Calendar size={18} />} label="Horario" withConnector={false} />
+          <NavItem href="/courses" icon={<BookOpen size={18} />} label="Cursos" withConnector={false} />
         </nav>
 
-        {/* Otros */}
         <div className="px-2 mt-4 mb-1">
           <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Otros</span>
         </div>
 
         <nav className="space-y-1 text-sm">
-          <NavItem
-            href="/settings"
-            icon={<Settings size={18} />}
-            label="Configuración"
-            withConnector={false}
-          />
-
-          <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 text-left cursor-pointer">
+          <NavItem href="/settings" icon={<Settings size={18} />} label="Configuración" withConnector={false} />
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 text-left cursor-pointer"
+          >
             <LogOut size={18} />
             Cerrar sesión
           </button>
         </nav>
       </div>
 
-      {/* Parte inferior fija (usuario) */}
-      <div className="px-4 py-3 flex items-center gap-3 border-t border-gray-100">
+      {/* Parte inferior fija (usuario) cliqueable */}
+      <Link
+        href="/profile"
+        className="px-4 py-3 flex items-center gap-3 border-t border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+      >
         <img src="/images/user.jpg" alt="User" className="w-10 h-10 rounded-md" />
         <div>
           <p className="text-sm font-medium text-gray-900">
@@ -114,7 +95,7 @@ export default function Sidebar() {
           </p>
           <p className="text-xs text-gray-500">{roleLabel}</p>
         </div>
-      </div>
+      </Link>
     </aside>
   );
 }

@@ -7,6 +7,9 @@ export interface User {
   lastName: string;
   role: string;
   status: boolean;
+  profileImage?: string; // 👈 Agregado (opcional)
+  lastLogin?: string;    // 👈 Ya que también lo usas en ProfilePage
+  createdAt?: string; 
 }
 
 export interface LoginResponse {
