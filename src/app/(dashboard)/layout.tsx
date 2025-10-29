@@ -13,6 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitles: Record<string, string> = {
     "/attendance": "Asistencia",
     "/admin/university": "Universidad",
+    "/admin/programs": "Programas",
     "/admin/divisions": "Divisiones",
   };
   const title = pageTitles[pathname] || "Dashboard";
@@ -26,11 +27,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Sidebar móvil (overlay con animación) */}
       <div
-        className={`fixed inset-0 z-40 flex md:hidden transition-opacity duration-300 ${
-          sidebarOpen
+        className={`fixed inset-0 z-40 flex md:hidden transition-opacity duration-300 ${sidebarOpen
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
-        }`}
+          }`}
       >
         {/* Fondo oscuro traslúcido */}
         <div
@@ -40,9 +40,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Sidebar deslizable */}
         <div
-          className={`relative w-64 bg-white rounded-r-xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`relative w-64 bg-white rounded-r-xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           {/* Botón cerrar */}
           <button
