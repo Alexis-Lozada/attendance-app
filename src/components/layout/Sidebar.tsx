@@ -6,19 +6,13 @@ import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
 import AdminMenu from "@/components/sidebar/AdminMenu";
 import NavItem from "@/components/sidebar/NavItem";
+import { RoleLabels, UserRole } from "@/types/roles";
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
-
   const handleLogout = () => logout();
 
-  const roleLabels: Record<string, string> = {
-    ADMIN: "Administrador",
-    STUDENT: "Estudiante",
-    TEACHER: "Profesor",
-    USER: "Usuario",
-  };
-  const roleLabel = user?.role ? roleLabels[user.role] || user.role : "Usuario";
+  const roleLabel = user?.role ? RoleLabels[user.role as UserRole] || user.role : "Usuario";
 
   return (
     <aside className="w-64 h-full bg-white rounded-xl flex flex-col">
@@ -83,10 +77,10 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Parte inferior fija (usuario) cliqueable */}
+      {/* Parte inferior fija (usuario) */}
       <Link
         href="/profile"
-        className="px-4 py-3 flex items-center gap-3 border-t border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+        className="px-4 py-3 flex items-center gap-3 border-t border-gray-100 cursor-pointer"
       >
         <img src="/images/user.jpg" alt="User" className="w-10 h-10 rounded-md" />
         <div>

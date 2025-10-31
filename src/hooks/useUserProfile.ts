@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getUserById, updateUserProfile, UserResponseDTO } from "@/services/user.service";
+import { getUserById, updateUserProfile } from "@/services/user.service";
 import { getFileUrl, uploadFile } from "@/services/storage.service";
 import { useAuth } from "@/context/AuthContext";
+import type { User } from "@/types/user";
 
 export function useUserProfile() {
   const { user } = useAuth();
-  const [userData, setUserData] = useState<UserResponseDTO | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -28,6 +29,7 @@ export function useUserProfile() {
         const data = await getUserById(user.idUser);
         let url: string | null = null;
 
+        // Si solo viene el UUID, obtener URL desde storage-ms
         if (data.profileImage && !data.profileImage.startsWith("http")) {
           url = await getFileUrl(data.profileImage);
         } else if (data.profileImage?.startsWith("http")) {
@@ -51,7 +53,7 @@ export function useUserProfile() {
     fetchUserData();
   }, [user?.idUser]);
 
-  // === Subir nueva foto ===
+  // === Subir nueva foto de perfil ===
   const handleProfileClick = () => {
     fileInputRef.current?.click();
   };
@@ -62,11 +64,14 @@ export function useUserProfile() {
 
     setUploading(true);
     try {
+      // Subir imagen y obtener UUID
       const uuid = await uploadFile(file);
       if (!uuid) throw new Error("No se pudo subir el archivo.");
 
+      // Actualizar perfil en backend
       const updated = await updateUserProfile(userData.idUser, { profileImage: uuid });
       const newUrl = await getFileUrl(uuid);
+
       setProfileUrl(newUrl);
       setUserData(updated);
 

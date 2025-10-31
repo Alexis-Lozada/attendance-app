@@ -1,16 +1,4 @@
-export interface User {
-  idUser: number;
-  idUniversity: number;
-  email: string;
-  enrollmentNumber: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  status: boolean;
-  profileImage?: string; // 👈 Agregado (opcional)
-  lastLogin?: string;    // 👈 Ya que también lo usas en ProfilePage
-  createdAt?: string; 
-}
+import type { User } from "@/types/user";
 
 export interface LoginResponse {
   user: User;
