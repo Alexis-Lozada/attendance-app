@@ -72,7 +72,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="space-y-1 text-sm">
-          <NavItem href="/settings" icon={<Settings size={18} />} label="Configuración" withConnector={false} />
+          <NavItem href="/profile" icon={<Settings size={18} />} label="Mi Perfil" withConnector={false} />
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 text-left cursor-pointer"

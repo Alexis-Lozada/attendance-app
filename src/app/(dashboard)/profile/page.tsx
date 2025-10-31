@@ -1,129 +1,189 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
-import { Mail, Image as ImageIcon, Edit3 } from "lucide-react";
+import { Edit3, Mail, Lock, Loader2 } from "lucide-react";
+import Toast from "@/components/ui/Toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
-  const [profileImage, setProfileImage] = useState(user?.profileImage || "/images/user.jpg");
+  const {
+    user,
+    userData,
+    profileUrl,
+    loading,
+    uploading,
+    toast,
+    setToast,
+    fileInputRef,
+    handleProfileClick,
+    handleFileChange,
+  } = useUserProfile();
 
   if (!user) return <p className="text-gray-500">Iniciando sesión...</p>;
+  if (loading) return <p className="text-gray-500">Cargando datos del usuario...</p>;
+  if (!userData) return <p className="text-red-500">No se pudieron cargar los datos del usuario.</p>;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* === Encabezado === */}
+    <div className="flex flex-col gap-6 lg:mr-50">
+      {toast && (
+        <Toast
+          title={toast.title}
+          description={toast.description}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <header className="flex flex-col gap-1 mb-3">
-        <h3 className="text-[15px] font-semibold text-gray-900">Perfil de usuario</h3>
+        <h3 className="text-[15px] font-semibold text-gray-900">Configuración de cuenta</h3>
         <p className="text-[13px] text-gray-500">
-          Administra tu información personal y preferencias de cuenta.
+          Administra los detalles de tu perfil e información personal.
         </p>
       </header>
 
-      {/* === Sección de perfil principal === */}
-      <section className="bg-white rounded-xl border border-gray-200 p-6 grid grid-cols-1 lg:grid-cols-[1fr_2fr_auto] gap-8 items-start">
-        {/* === Columna Izquierda: descripción === */}
-        <div>
-          <h4 className="text-sm font-semibold text-gray-900 mb-1">Perfil</h4>
-          <p className="text-sm text-gray-500">
-            Configura los detalles de tu cuenta y mantén tu información actualizada.
+      {/* === Perfil principal === */}
+      <section className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div
+          className="relative w-24 h-24 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center cursor-pointer group"
+          onClick={handleProfileClick}
+        >
+          {uploading ? (
+            <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+          ) : profileUrl ? (
+            <img
+              src={profileUrl}
+              alt="Foto de perfil"
+              className="w-full h-full object-cover group-hover:brightness-75 transition"
+            />
+          ) : (
+            <div className="text-gray-400 text-sm">Sin foto</div>
+          )}
+
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition">
+            <Edit3 className="text-white opacity-0 group-hover:opacity-100 transition w-5 h-5" />
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
+
+        <div className="flex-1 text-center md:text-left">
+          <h2 className="text-base font-semibold text-gray-900">
+            {userData.firstName} {userData.lastName}
+          </h2>
+          <p className="text-sm text-gray-500 flex items-center justify-center md:justify-start gap-2">
+            <Mail size={14} /> {userData.email}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {userData.role === "ADMIN"
+              ? "Administrador del sistema"
+              : userData.role === "TEACHER"
+              ? "Docente"
+              : userData.role === "STUDENT"
+              ? "Estudiante"
+              : "Usuario del sistema"}
           </p>
         </div>
 
-        {/* === Columna Central: formulario visual === */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          {/* Nombre */}
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Nombre</label>
-            <input
-              type="text"
-              value={user.firstName || ""}
-              disabled
-              className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-900 focus:outline-none"
-            />
-          </div>
+        <button className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition">
+          <Edit3 className="w-4 h-4" />
+          Editar
+        </button>
+      </section>
 
-          {/* Apellido */}
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-500 mb-1">Apellido</label>
-            <input
-              type="text"
-              value={user.lastName || ""}
-              disabled
-              className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-900 focus:outline-none"
-            />
+      {/* === Información personal === */}
+      <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">Información personal</h4>
+            <p className="text-sm text-gray-500">Detalles vinculados a tu cuenta.</p>
           </div>
+          <button className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition">
+            <Edit3 className="w-4 h-4" />
+            Editar
+          </button>
+        </div>
 
-          {/* Correo */}
-          <div className="flex flex-col col-span-1 md:col-span-2">
-            <label className="text-xs text-gray-500 mb-1">Correo electrónico</label>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
-              <Mail size={16} className="text-gray-500" />
-              <span className="text-sm text-gray-900 truncate">{user.email}</span>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+          <Info label="Nombre" value={userData.firstName} />
+          <Info label="Apellido" value={userData.lastName} />
+          <Info label="Correo electrónico" value={userData.email} />
+          <Info label="Número de matrícula" value={userData.enrollmentNumber} />
+          <Info label="Universidad asociada" value={userData.idUniversity ? `ID ${userData.idUniversity}` : "—"} />
+          <Info
+            label="Fecha de registro"
+            value={
+              userData.createdAt
+                ? new Date(userData.createdAt as any).toLocaleDateString()
+                : "—"
+            }
+          />
+        </div>
+      </section>
+
+      {/* === Cambio de contraseña === */}
+      <section className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">Cambio de contraseña</h4>
+            <p className="text-sm text-gray-500">
+              Actualiza tu contraseña para mantener tu cuenta segura.
+            </p>
           </div>
         </div>
 
-        {/* === Columna Derecha: Foto de perfil === */}
-        <div className="flex flex-col items-center lg:items-end">
-          <div
-            className="relative w-28 h-28 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center cursor-pointer group"
-            onClick={() => console.log("Cambiar foto (aquí irá el modal o input)")}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
+          <PasswordInput label="Contraseña actual" />
+          <PasswordInput label="Nueva contraseña" />
+          <PasswordInput label="Confirmar nueva contraseña" className="md:col-span-2" />
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <button
+            disabled
+            className="flex items-center gap-2 text-sm font-medium text-white bg-primary px-4 py-2 rounded-md opacity-60 cursor-not-allowed"
           >
-            {profileImage ? (
-              <img
-                src={profileImage}
-                alt="Foto de perfil"
-                className="w-full h-full object-cover group-hover:brightness-75 transition"
-              />
-            ) : (
-              <ImageIcon className="w-10 h-10 text-gray-400" />
-            )}
-
-            {/* Overlay de hover con ícono */}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition">
-              <Edit3 className="text-white opacity-0 group-hover:opacity-100 transition w-6 h-6" />
-            </div>
-          </div>
+            <Lock size={16} />
+            Guardar cambios
+          </button>
         </div>
       </section>
+    </div>
+  );
+}
 
-      {/* === Información adicional === */}
-      <section className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col lg:flex-row gap-10">
-        {/* Descripción izquierda */}
-        <div className="lg:w-1/3">
-          <h4 className="text-sm font-semibold text-gray-900 mb-1">
-            Información adicional
-          </h4>
-          <p className="text-sm text-gray-500">
-            Datos vinculados a tu registro institucional.
-          </p>
-        </div>
+/* ────────────────────────────── */
+/* 📦 Subcomponentes auxiliares  */
+/* ────────────────────────────── */
+function Info({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className="text-sm text-gray-900">{value || "—"}</p>
+    </div>
+  );
+}
 
-        {/* Datos */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Número de matrícula</p>
-            <p className="text-sm text-gray-900 border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
-              {user.enrollmentNumber || "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Universidad asociada</p>
-            <p className="text-sm text-gray-900 border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
-              {user.idUniversity ? `ID ${user.idUniversity}` : "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Fecha de registro</p>
-            <p className="text-sm text-gray-900 border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
-              {user.createdAt
-                ? new Date(user.createdAt).toLocaleDateString()
-                : "—"}
-            </p>
-          </div>
-        </div>
-      </section>
+function PasswordInput({
+  label,
+  className = "",
+}: {
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col ${className}`}>
+      <label className="text-xs text-gray-500 mb-1">{label}</label>
+      <input
+        type="password"
+        placeholder="••••••••"
+        disabled
+        className="border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-900 focus:outline-none"
+      />
     </div>
   );
 }

@@ -14,7 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     "/attendance": "Asistencia",
     "/admin/university": "Universidad",
     "/admin/divisions": "Divisiones",
-    "/profile": "Configuración",
+    "/profile": "Mi Perfil",
   };
   const title = pageTitles[pathname] || "Dashboard";
 
