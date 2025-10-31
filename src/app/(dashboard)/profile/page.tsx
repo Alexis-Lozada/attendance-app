@@ -2,13 +2,16 @@
 
 import { Edit3, Mail, Lock, Loader2 } from "lucide-react";
 import Toast from "@/components/ui/Toast";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import Modal from "@/components/ui/Modal";
+import ProfileEditForm from "@/components/profile/ProfileEditForm";
+import { useProfile } from "@/hooks/useProfile";
 import { UserRole, RoleLabels } from "@/types/roles";
 
 export default function ProfilePage() {
   const {
     user,
     userData,
+    universityName,
     profileUrl,
     loading,
     uploading,
@@ -17,7 +20,11 @@ export default function ProfilePage() {
     fileInputRef,
     handleProfileClick,
     handleFileChange,
-  } = useUserProfile();
+    isModalOpen,
+    openEditModal,
+    closeEditModal,
+    handleSaveProfile,
+  } = useProfile();
 
   if (!user) return <p className="text-gray-500">Iniciando sesión...</p>;
   if (loading) return <p className="text-gray-500">Cargando datos del usuario...</p>;
@@ -25,6 +32,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-6 lg:mr-50">
+      {/* Toast */}
       {toast && (
         <Toast
           title={toast.title}
@@ -34,6 +42,20 @@ export default function ProfilePage() {
         />
       )}
 
+      {/* Modal de edición */}
+      <Modal
+        title="Editar información del perfil"
+        isOpen={isModalOpen}
+        onClose={closeEditModal}
+      >
+        <ProfileEditForm
+          initialData={userData}
+          onSave={handleSaveProfile}
+          onCancel={closeEditModal}
+        />
+      </Modal>
+
+      {/* Encabezado */}
       <header className="flex flex-col gap-1 mb-3">
         <h3 className="text-[15px] font-semibold text-gray-900">Configuración de cuenta</h3>
         <p className="text-[13px] text-gray-500">
@@ -43,6 +65,7 @@ export default function ProfilePage() {
 
       {/* === Perfil principal === */}
       <section className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        {/* Foto de perfil */}
         <div
           className="relative w-24 h-24 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center cursor-pointer group"
           onClick={handleProfileClick}
@@ -72,6 +95,7 @@ export default function ProfilePage() {
           />
         </div>
 
+        {/* Información principal */}
         <div className="flex-1 text-center md:text-left">
           <h2 className="text-base font-semibold text-gray-900">
             {userData.firstName} {userData.lastName}
@@ -80,15 +104,9 @@ export default function ProfilePage() {
             <Mail size={14} /> {userData.email}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            {RoleLabels[userData.role as UserRole] || "Usuario"}
+            {RoleLabels[userData.role as UserRole] || "Usuario del sistema"}
           </p>
         </div>
-
-        {/* Botón editar */}
-        <button className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition">
-          <Edit3 className="w-4 h-4" />
-          Editar
-        </button>
       </section>
 
       {/* === Información personal === */}
@@ -98,7 +116,10 @@ export default function ProfilePage() {
             <h4 className="text-sm font-semibold text-gray-900">Información personal</h4>
             <p className="text-sm text-gray-500">Detalles vinculados a tu cuenta.</p>
           </div>
-          <button className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition">
+          <button
+            onClick={openEditModal}
+            className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition"
+          >
             <Edit3 className="w-4 h-4" />
             Editar
           </button>
@@ -109,7 +130,10 @@ export default function ProfilePage() {
           <Info label="Apellido" value={userData.lastName} />
           <Info label="Correo electrónico" value={userData.email} />
           <Info label="Número de matrícula" value={userData.enrollmentNumber} />
-          <Info label="Universidad asociada" value={userData.idUniversity ? `ID ${userData.idUniversity}` : "—"} />
+          <Info
+            label="Universidad asociada"
+            value={universityName || "—"} // ✅ ahora muestra el nombre real
+          />
           <Info
             label="Fecha de registro"
             value={
@@ -152,9 +176,7 @@ export default function ProfilePage() {
   );
 }
 
-/* ────────────────────────────── */
-/* 📦 Subcomponentes auxiliares  */
-/* ────────────────────────────── */
+// Subcomponentes auxiliares
 function Info({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
