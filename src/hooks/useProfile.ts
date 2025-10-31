@@ -3,15 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { getUserById, updateUserProfile } from "@/services/user.service";
 import { getFileUrl, uploadFile } from "@/services/storage.service";
+import { getUniversityById } from "@/services/university.service"; // ✅ nuevo
 import { useAuth } from "@/context/AuthContext";
 import type { User } from "@/types/user";
 
-export function useUserProfile() {
+export function useProfile() {
   const { user } = useAuth();
   const [userData, setUserData] = useState<User | null>(null);
+  const [universityName, setUniversityName] = useState<string>("—"); // ✅ nuevo
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [toast, setToast] = useState<{
@@ -28,8 +31,10 @@ export function useUserProfile() {
       try {
         const data = await getUserById(user.idUser);
         let url: string | null = null;
+        
+        const uni = await getUniversityById(data.idUniversity);
+        setUniversityName(uni?.name || "—");
 
-        // Si solo viene el UUID, obtener URL desde storage-ms
         if (data.profileImage && !data.profileImage.startsWith("http")) {
           url = await getFileUrl(data.profileImage);
         } else if (data.profileImage?.startsWith("http")) {
@@ -53,10 +58,8 @@ export function useUserProfile() {
     fetchUserData();
   }, [user?.idUser]);
 
-  // === Subir nueva foto de perfil ===
-  const handleProfileClick = () => {
-    fileInputRef.current?.click();
-  };
+  // === Subir nueva foto ===
+  const handleProfileClick = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,11 +67,9 @@ export function useUserProfile() {
 
     setUploading(true);
     try {
-      // Subir imagen y obtener UUID
       const uuid = await uploadFile(file);
       if (!uuid) throw new Error("No se pudo subir el archivo.");
 
-      // Actualizar perfil en backend
       const updated = await updateUserProfile(userData.idUser, { profileImage: uuid });
       const newUrl = await getFileUrl(uuid);
 
@@ -92,9 +93,37 @@ export function useUserProfile() {
     }
   };
 
+  // === Modal y edición ===
+  const openEditModal = () => setIsModalOpen(true);
+  const closeEditModal = () => setIsModalOpen(false);
+
+  const handleSaveProfile = async (formData: Partial<User>) => {
+    if (!userData) return;
+
+    try {
+      const updated = await updateUserProfile(userData.idUser, formData);
+      setUserData(updated);
+      setIsModalOpen(false);
+
+      setToast({
+        title: "Perfil actualizado",
+        description: "Tu información se guardó correctamente.",
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error guardando perfil:", error);
+      setToast({
+        title: "Error al guardar cambios",
+        description: "No se pudieron aplicar los cambios.",
+        type: "error",
+      });
+    }
+  };
+
   return {
     user,
     userData,
+    universityName,
     profileUrl,
     loading,
     uploading,
@@ -103,5 +132,9 @@ export function useUserProfile() {
     fileInputRef,
     handleProfileClick,
     handleFileChange,
+    isModalOpen,
+    openEditModal,
+    closeEditModal,
+    handleSaveProfile,
   };
 }
