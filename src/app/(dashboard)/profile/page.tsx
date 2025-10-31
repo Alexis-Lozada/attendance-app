@@ -89,6 +89,7 @@ export default function ProfilePage() {
           </p>
         </div>
 
+        {/* Botón editar */}
         <button className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition">
           <Edit3 className="w-4 h-4" />
           Editar
