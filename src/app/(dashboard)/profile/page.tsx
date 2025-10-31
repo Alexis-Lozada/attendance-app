@@ -3,6 +3,7 @@
 import { Edit3, Mail, Lock, Loader2 } from "lucide-react";
 import Toast from "@/components/ui/Toast";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { UserRole, RoleLabels } from "@/types/roles";
 
 export default function ProfilePage() {
   const {
@@ -79,16 +80,11 @@ export default function ProfilePage() {
             <Mail size={14} /> {userData.email}
           </p>
           <p className="text-sm text-gray-500 mt-1">
-            {userData.role === "ADMIN"
-              ? "Administrador del sistema"
-              : userData.role === "TEACHER"
-              ? "Docente"
-              : userData.role === "STUDENT"
-              ? "Estudiante"
-              : "Usuario del sistema"}
+            {RoleLabels[userData.role as UserRole] || "Usuario"}
           </p>
         </div>
 
+        {/* Botón editar */}
         <button className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition">
           <Edit3 className="w-4 h-4" />
           Editar
