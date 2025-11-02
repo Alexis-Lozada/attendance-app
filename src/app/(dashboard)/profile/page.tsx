@@ -22,6 +22,7 @@ export default function ProfilePage() {
     setToast,
     handleSaveProfile,
     handleProfileImageChange,
+    handleChangePassword,
   } = useProfile(idUser);
 
   if (loading) return <Spinner text="Cargando perfil..." fullScreen />;
@@ -62,7 +63,7 @@ export default function ProfilePage() {
         handleSaveProfile={handleSaveProfile}
       />
 
-      <ChangePasswordCard />
+      <ChangePasswordCard onChangePassword={handleChangePassword} />
     </div>
   );
 }

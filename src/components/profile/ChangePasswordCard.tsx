@@ -4,15 +4,19 @@ import { useState } from "react";
 import { Edit3 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import ChangePasswordForm from "@/components/profile/ChangePasswordForm";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/context/AuthContext";
 
-export default function ChangePasswordCard() {
+interface ChangePasswordCardProps {
+  onChangePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+  }) => Promise<void>;
+}
+
+export default function ChangePasswordCard({
+  onChangePassword,
+}: ChangePasswordCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { user } = useAuth();
-  const idUser = user?.idUser ?? 0;
-
-  const { handleChangePassword, changingPassword } = useProfile(idUser);
+  const [changing, setChanging] = useState(false);
 
   return (
     <>
@@ -23,13 +27,18 @@ export default function ChangePasswordCard() {
         onClose={() => setIsModalOpen(false)}
       >
         <ChangePasswordForm
-          changing={changingPassword}
+          changing={changing}
           onSave={async (data) => {
-            await handleChangePassword({
-              currentPassword: data.currentPassword,
-              newPassword: data.newPassword,
-            });
-            setIsModalOpen(false);
+            try {
+              setChanging(true);
+              await onChangePassword({
+                currentPassword: data.currentPassword,
+                newPassword: data.newPassword,
+              });
+              setIsModalOpen(false);
+            } finally {
+              setChanging(false);
+            }
           }}
           onCancel={() => setIsModalOpen(false)}
         />
