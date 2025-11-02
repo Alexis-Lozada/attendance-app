@@ -1,140 +1,155 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { getUserById, updateUserProfile } from "@/services/user.service";
+import { useEffect, useState } from "react";
+import { getUserById, updateUserProfile, changeUserPassword } from "@/services/user.service";
 import { getFileUrl, uploadFile } from "@/services/storage.service";
-import { getUniversityById } from "@/services/university.service"; // ✅ nuevo
-import { useAuth } from "@/context/AuthContext";
+import { getUniversityById } from "@/services/university.service";
 import type { User } from "@/types/user";
 
-export function useProfile() {
-  const { user } = useAuth();
+interface ToastData {
+  title: string;
+  description: string;
+  type: "success" | "error";
+}
+
+export function useProfile(idUser: number) {
   const [userData, setUserData] = useState<User | null>(null);
-  const [universityName, setUniversityName] = useState<string>("—"); // ✅ nuevo
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const [universityName, setUniversityName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
 
-  const [toast, setToast] = useState<{
-    title: string;
-    description?: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  // === Cargar datos del usuario ===
   useEffect(() => {
-    if (!user?.idUser) return;
+    if (!idUser) return;
+    fetchProfileData();
+  }, [idUser]);
 
-    const fetchUserData = async () => {
-      try {
-        const data = await getUserById(user.idUser);
-        let url: string | null = null;
-        
-        const uni = await getUniversityById(data.idUniversity);
-        setUniversityName(uni?.name || "—");
-
-        if (data.profileImage && !data.profileImage.startsWith("http")) {
-          url = await getFileUrl(data.profileImage);
-        } else if (data.profileImage?.startsWith("http")) {
-          url = data.profileImage;
-        }
-
-        setProfileUrl(url);
-        setUserData(data);
-      } catch (error) {
-        console.error("Error al obtener usuario:", error);
-        setToast({
-          title: "Error al cargar usuario",
-          description: "No se pudo obtener la información del perfil.",
-          type: "error",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [user?.idUser]);
-
-  // === Subir nueva foto ===
-  const handleProfileClick = () => fileInputRef.current?.click();
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !userData) return;
-
-    setUploading(true);
+  async function fetchProfileData() {
     try {
+      setLoading(true);
+      const user = await getUserById(idUser);
+      setUserData(user);
+
+      if (user.profileImage) {
+        const url = await getFileUrl(user.profileImage);
+        setProfileUrl(url);
+      }
+
+      if (user.idUniversity) {
+        const uni = await getUniversityById(user.idUniversity);
+        setUniversityName(uni.name);
+      }
+    } catch (error) {
+      console.error("Error cargando perfil:", error);
+      setToast({
+        title: "Error",
+        description: "No se pudo cargar la información del perfil.",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveProfile(data: Partial<User>) {
+    try {
+      if (!userData) return;
+      const updated = await updateUserProfile(userData.idUser, data);
+      setUserData((prev) => ({ ...prev!, ...updated }));
+      setToast({
+        title: "Perfil actualizado",
+        description: "Los cambios se han guardado correctamente.",
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error actualizando perfil:", error);
+      setToast({
+        title: "Error",
+        description: "No se pudo actualizar el perfil.",
+        type: "error",
+      });
+    }
+  }
+
+  async function handleProfileImageChange(file: File) {
+    try {
+      if (!userData) return;
+      setUploading(true);
+
       const uuid = await uploadFile(file);
-      if (!uuid) throw new Error("No se pudo subir el archivo.");
+      if (!uuid) throw new Error("Error al subir la imagen.");
 
       const updated = await updateUserProfile(userData.idUser, { profileImage: uuid });
       const newUrl = await getFileUrl(uuid);
 
       setProfileUrl(newUrl);
-      setUserData(updated);
+      setUserData((prev) => ({ ...prev!, profileImage: uuid }));
 
       setToast({
-        title: "Foto actualizada",
-        description: "Tu foto de perfil se actualizó correctamente.",
+        title: "Imagen actualizada",
+        description: "Tu foto de perfil se ha actualizado correctamente.",
         type: "success",
       });
     } catch (error) {
-      console.error("Error actualizando foto de perfil:", error);
+      console.error("Error cambiando imagen:", error);
       setToast({
-        title: "Error al subir imagen",
-        description: "Ocurrió un problema al actualizar tu foto.",
+        title: "Error",
+        description: "No se pudo cambiar la imagen de perfil.",
         type: "error",
       });
     } finally {
       setUploading(false);
     }
-  };
+  }
 
-  // === Modal y edición ===
-  const openEditModal = () => setIsModalOpen(true);
-  const closeEditModal = () => setIsModalOpen(false);
-
-  const handleSaveProfile = async (formData: Partial<User>) => {
-    if (!userData) return;
-
+  async function handleChangePassword({
+    currentPassword,
+    newPassword,
+  }: {
+    currentPassword: string;
+    newPassword: string;
+  }) {
     try {
-      const updated = await updateUserProfile(userData.idUser, formData);
-      setUserData(updated);
-      setIsModalOpen(false);
+      if (!userData) return;
+      setChangingPassword(true);
+
+      await changeUserPassword(userData.idUser, {
+        currentPassword,
+        newPassword,
+      });
 
       setToast({
-        title: "Perfil actualizado",
-        description: "Tu información se guardó correctamente.",
+        title: "Contraseña actualizada",
+        description: "Tu contraseña se ha cambiado correctamente.",
         type: "success",
       });
-    } catch (error) {
-      console.error("Error guardando perfil:", error);
+    } catch (error: any) {
+      console.error("Error cambiando contraseña:", error);
       setToast({
-        title: "Error al guardar cambios",
-        description: "No se pudieron aplicar los cambios.",
+        title: "Error",
+        description:
+          error?.response?.data?.message ||
+          "No se pudo cambiar la contraseña.",
         type: "error",
       });
+    } finally {
+      setChangingPassword(false);
     }
-  };
+  }
 
   return {
-    user,
     userData,
-    universityName,
     profileUrl,
+    universityName,
     loading,
     uploading,
     toast,
     setToast,
-    fileInputRef,
-    handleProfileClick,
-    handleFileChange,
-    isModalOpen,
-    openEditModal,
-    closeEditModal,
+    changingPassword,
     handleSaveProfile,
+    handleProfileImageChange,
+    handleChangePassword,
   };
 }
