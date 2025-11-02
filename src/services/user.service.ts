@@ -18,3 +18,12 @@ export async function updateUserProfile(idUser: number, payload: Partial<User>):
   const { data } = await usersApi.put(`/users/${idUser}`, payload);
   return data;
 }
+
+// === Cambiar contraseña de usuario ===
+export async function changeUserPassword(
+  idUser: number,
+  payload: { currentPassword: string; newPassword: string }
+): Promise<{ message: string }> {
+  const { data } = await usersApi.put(`/users/${idUser}/change-password`, payload);
+  return data;
+}
