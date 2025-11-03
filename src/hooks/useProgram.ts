@@ -6,10 +6,11 @@ import {
   getProgramsByUniversity,
   createProgram,
   updateProgram,
-  updateProgramStatus
+  updateProgramStatus,
 } from "@/services/program.service";
 import { getDivisionsByUniversity } from "@/services/division.service";
-import type { ProgramWithDivision, Division, ProgramFormData } from "@/types/program";
+import type { ProgramWithDivision, ProgramFormData } from "@/types/program";
+import type { Division } from "@/types/division";
 
 /**
  * Hook personalizado para manejar programas educativos:

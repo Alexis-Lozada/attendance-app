@@ -12,12 +12,6 @@ export interface ProgramWithDivision extends Program {
   divisionCode?: string;
 }
 
-export interface Division {
-  idDivision: number;
-  name: string;
-  code: string;
-}
-
 export interface ProgramFormData {
   idDivision: number;
   programCode: string;

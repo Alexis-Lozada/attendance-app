@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import type { Program, ProgramWithDivision, Division, ProgramFormData } from "@/types/program";
+import type { ProgramWithDivision, ProgramFormData } from "@/types/program";
+import type { Division } from "@/types/division";
 
 interface Props {
   initialData?: ProgramWithDivision | null;
