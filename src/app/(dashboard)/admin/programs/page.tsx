@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { 
   Plus, 
   GraduationCap, 
@@ -8,157 +7,59 @@ import {
   BookOpen, 
   SlidersHorizontal, 
   MoreVertical, 
-  Edit2,
-  Eye
+  Edit2
 } from "lucide-react";
 
 import Table, { TableColumn } from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
 import Switch from "@/components/ui/Switch";
-
-// Types for Educational Programs (matching database schema)
-interface Program {
-  idProgram: number;
-  idDivision: number;
-  programCode: string;
-  programName: string;
-  description: string;
-  status: boolean;
-  divisionName?: string; // For display purposes
-}
-
-// Mock data for demonstration (matching database schema)
-const mockPrograms: Program[] = [
-  {
-    idProgram: 1,
-    idDivision: 1,
-    programCode: "IDGS",
-    programName: "Ingeniería en Desarrollo y Gestión de Software",
-    description: "Programa enfocado en el desarrollo de software empresarial y gestión de proyectos tecnológicos.",
-    status: true,
-    divisionName: "Área de Ingeniería"
-  },
-  {
-    idProgram: 2,
-    idDivision: 1,
-    programCode: "ISC",
-    programName: "Ingeniería en Sistemas Computacionales",
-    description: "Carrera orientada al diseño y desarrollo de sistemas computacionales complejos.",
-    status: true,
-    divisionName: "Área de Ingeniería"
-  },
-  {
-    idProgram: 3,
-    idDivision: 2,
-    programCode: "LAE",
-    programName: "Licenciatura en Administración de Empresas",
-    description: "Programa integral de formación en administración y gestión empresarial.",
-    status: true,
-    divisionName: "Área de Ciencias Económico-Administrativas"
-  },
-  {
-    idProgram: 4,
-    idDivision: 1,
-    programCode: "MDS",
-    programName: "Maestría en Desarrollo de Software",
-    description: "Posgrado especializado en metodologías avanzadas de desarrollo de software.",
-    status: false,
-    divisionName: "Área de Ingeniería"
-  },
-  {
-    idProgram: 5,
-    idDivision: 3,
-    programCode: "TUR",
-    programName: "Licenciatura en Turismo",
-    description: "Formación integral en gestión turística y hospitalidad.",
-    status: true,
-    divisionName: "Área de Turismo y Gastronomía"
-  }
-];
-
-// Mock divisions data (this would come from division.service.ts)
-const mockDivisions = [
-  { idDivision: 1, name: "Área de Ingeniería", code: "ING" },
-  { idDivision: 2, name: "Área de Ciencias Económico-Administrativas", code: "CEA" },
-  { idDivision: 3, name: "Área de Turismo y Gastronomía", code: "TUR" },
-  { idDivision: 4, name: "Área de Ciencias de la Salud", code: "SAL" }
-];
+import ProgramForm from "@/components/programs/ProgramForm";
+import Spinner from "@/components/ui/Spinner";
+import { useProgram } from "@/hooks/useProgram";
+import type { ProgramWithDivision } from "@/types/program";
 
 export default function ProgramsPage() {
-  const [programs] = useState<Program[]>(mockPrograms);
-  const [divisions] = useState(mockDivisions);
-  const [loading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDivision, setSelectedDivision] = useState<number | "all">("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
-  const [toast, setToast] = useState<{
-    title: string;
-    description?: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  const programsPerPage = 5;
-
-  // Filter programs based on search term and selected division
-  const filteredPrograms = programs.filter(program => {
-    const matchesSearch = 
-      program.programCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      program.programName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      program.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      program.divisionName?.toLowerCase().includes(searchTerm.toLowerCase());
+  const {
+    // Data
+    programs,
+    divisions,
+    filteredPrograms,
+    totalPrograms,
     
-    const matchesDivision = selectedDivision === "all" || program.idDivision === selectedDivision;
+    // Pagination
+    currentPage,
+    totalPages,
+    setCurrentPage,
     
-    return matchesSearch && matchesDivision;
-  });
+    // Filters
+    searchTerm,
+    selectedDivision,
+    setSearchTerm,
+    handleDivisionChange,
+    
+    // Modal & Form
+    isModalOpen,
+    setIsModalOpen,
+    selectedProgram,
+    formLoading,
+    
+    // Actions
+    handleSaveProgram,
+    handleToggleStatus,
+    handleEdit,
+    handleOpenAdd,
+    
+    // State
+    loading,
+    toast,
+    setToast,
+  } = useProgram();
 
-  const handleDivisionChange = (divisionId: number | "all") => {
-    setSelectedDivision(divisionId);
-    setCurrentPage(1); // Reset to first page when filter changes
-  };
-
-  const totalPages = Math.ceil(filteredPrograms.length / programsPerPage);
-  const currentPrograms = filteredPrograms.slice(
-    (currentPage - 1) * programsPerPage,
-    currentPage * programsPerPage
-  );
-
-  // Mock handlers (will be implemented with actual functionality later)
-  const handleToggleStatus = (idProgram: number, currentStatus: boolean) => {
-    console.log(`Toggle status for program ${idProgram}: ${!currentStatus}`);
-    setToast({
-      title: !currentStatus ? "Programa activado" : "Programa desactivado",
-      description: `El programa fue ${!currentStatus ? "activado" : "desactivado"} correctamente.`,
-      type: "success"
-    });
-  };
-
-  const handleEdit = (program: Program) => {
-    setSelectedProgram(program);
-    setIsModalOpen(true);
-  };
-
-  const handleView = (program: Program) => {
-    console.log("View program details:", program);
-    setToast({
-      title: "Vista de detalles",
-      description: "Funcionalidad en desarrollo",
-      type: "success"
-    });
-  };
-
-  const handleOpenAdd = () => {
-    setSelectedProgram(null);
-    setIsModalOpen(true);
-  };
-
-  if (loading) return <p className="text-gray-500">Cargando programas educativos...</p>;
+  if (loading) return <Spinner text="Cargando programas educativos..." fullScreen />;
 
   // Table columns configuration
-  const columns: TableColumn<Program>[] = [
+  const columns: TableColumn<ProgramWithDivision>[] = [
     { 
       key: "programCode", 
       label: "Código", 
@@ -210,13 +111,6 @@ export default function ProgramsPage() {
       render: (item) => (
         <div className="flex justify-center gap-2">
           <button
-            title="Ver detalles"
-            onClick={() => handleView(item)}
-            className="text-gray-600 hover:text-blue-600 transition"
-          >
-            <Eye size={15} />
-          </button>
-          <button
             title="Editar"
             onClick={() => handleEdit(item)}
             className="text-gray-600 hover:text-primary transition"
@@ -244,7 +138,7 @@ export default function ProgramsPage() {
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-[15px] font-semibold text-gray-900">
-            Programas Educativos
+            Administración de Programas Educativos
           </h3>
           <p className="text-[13px] text-gray-500">
             Gestiona los programas educativos, carreras y especialidades ofrecidas por la institución.
@@ -317,10 +211,10 @@ export default function ProgramsPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900">Total Programas</p>
-              <p className="text-2xl font-semibold text-gray-900">{filteredPrograms.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{totalPrograms}</p>
               {selectedDivision !== "all" && (
                 <p className="text-xs text-gray-500">
-                  de {programs.length} totales
+                  de {filteredPrograms.length} totales
                 </p>
               )}
             </div>
@@ -339,7 +233,7 @@ export default function ProgramsPage() {
               </p>
               {selectedDivision !== "all" && (
                 <p className="text-xs text-gray-500">
-                  de {filteredPrograms.length} filtrados
+                  de {totalPrograms} filtrados
                 </p>
               )}
             </div>
@@ -358,7 +252,7 @@ export default function ProgramsPage() {
               </p>
               {selectedDivision !== "all" && (
                 <p className="text-xs text-gray-500">
-                  de {filteredPrograms.length} filtrados
+                  de {totalPrograms} filtrados
                 </p>
               )}
             </div>
@@ -374,11 +268,11 @@ export default function ProgramsPage() {
             : `Programas de ${divisions.find(d => d.idDivision === selectedDivision)?.name || 'División Seleccionada'}`
         }
         columns={columns}
-        data={currentPrograms}
+        data={programs}
         currentPage={currentPage}
         totalPages={totalPages}
-        currentItemsCount={currentPrograms.length}
-        totalItemsCount={filteredPrograms.length}
+        currentItemsCount={programs.length}
+        totalItemsCount={totalPrograms}
         onPreviousPage={() => setCurrentPage(p => Math.max(p - 1, 1))}
         onNextPage={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
         onSearch={setSearchTerm}
@@ -389,35 +283,19 @@ export default function ProgramsPage() {
         }
       />
 
-      {/* Modal for create/edit (placeholder) */}
+      {/* Modal for create/edit */}
       <Modal
         title={selectedProgram ? "Editar programa educativo" : "Agregar nuevo programa"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            Formulario para {selectedProgram ? "editar" : "crear"} programa educativo.
-          </p>
-          <p className="text-xs text-gray-400">
-            Funcionalidad en desarrollo...
-          </p>
-          
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="border border-gray-300 text-gray-700 text-sm font-medium rounded-md px-4 py-2 hover:bg-gray-100 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="bg-primary text-white text-sm font-medium rounded-md px-4 py-2 hover:brightness-95 transition"
-            >
-              {selectedProgram ? "Guardar cambios" : "Guardar programa"}
-            </button>
-          </div>
-        </div>
+        <ProgramForm
+          initialData={selectedProgram}
+          divisions={divisions}
+          onSave={handleSaveProgram}
+          onCancel={() => setIsModalOpen(false)}
+          loading={formLoading}
+        />
       </Modal>
     </>
   );
