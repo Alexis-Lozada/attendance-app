@@ -9,7 +9,7 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "Attendance Client",
+  title: "Roster | Sistema de pase de asistencia",
   description: "Sistema de pase de asistencia",
 };
 
