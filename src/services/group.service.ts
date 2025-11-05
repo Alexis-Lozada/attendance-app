@@ -7,9 +7,9 @@ export interface GroupResponse {
   idTutor: number;
   tutorName: string;
   groupCode: string;
-  groupName: string;
   semester: string;
   academicYear: string;
+  enrollmentCount: number;
   status: boolean;
 }
 
@@ -60,7 +60,6 @@ export async function createGroup(payload: {
   idProgram: number;
   idTutor: number;
   groupCode: string;
-  groupName: string;
   semester: string;
   academicYear: string;
   status: boolean;
@@ -77,7 +76,6 @@ export async function updateGroup(
     idProgram: number;
     idTutor: number;
     groupCode: string;
-    groupName: string;
     semester: string;
     academicYear: string;
     status: boolean;

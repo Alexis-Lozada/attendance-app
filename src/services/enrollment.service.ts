@@ -5,7 +5,7 @@ export interface EnrollmentResponse {
   idStudent: number;
   studentName: string;
   idGroup: number;
-  groupName: string;
+  groupCode: string;
   enrollmentDate: string;
   status: boolean;
 }

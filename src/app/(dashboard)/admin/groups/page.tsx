@@ -26,7 +26,6 @@ interface Group {
   idProgram: number;
   idTutor: number;
   groupCode: string;
-  groupName: string;
   semester: string;
   academicYear: string;
   status: boolean;
@@ -35,7 +34,6 @@ interface Group {
   programCode?: string;
   tutorName?: string;
   enrolledStudents?: number;
-  totalCapacity?: number;
 }
 
 interface Program {
@@ -57,45 +55,39 @@ const mockGroups: Group[] = [
     idProgram: 1,
     idTutor: 1,
     groupCode: "IDGS12-A",
-    groupName: "Desarrollo de Software 12vo A",
     semester: "12",
     academicYear: "2024-2025",
     status: true,
     programName: "Ingeniería en Desarrollo y Gestión de Software",
     programCode: "IDGS",
     tutorName: "Dr. Juan Pérez",
-    enrolledStudents: 28,
-    totalCapacity: 35
+    enrolledStudents: 28
   },
   {
     idGroup: 2,
     idProgram: 1,
     idTutor: 2,
     groupCode: "IDGS10-B",
-    groupName: "Desarrollo de Software 10mo B",
     semester: "10",
     academicYear: "2024-2025",
     status: true,
     programName: "Ingeniería en Desarrollo y Gestión de Software",
     programCode: "IDGS",
     tutorName: "Mtra. María González",
-    enrolledStudents: 32,
-    totalCapacity: 35
+    enrolledStudents: 32
   },
   {
     idGroup: 3,
     idProgram: 2,
     idTutor: 3,
     groupCode: "ISC08-A",
-    groupName: "Sistemas Computacionales 8vo A",
     semester: "8",
     academicYear: "2024-2025",
     status: false,
     programName: "Ingeniería en Sistemas Computacionales",
     programCode: "ISC",
     tutorName: "Ing. Carlos López",
-    enrolledStudents: 15,
-    totalCapacity: 30
+    enrolledStudents: 15
   }
 ];
 
@@ -127,7 +119,6 @@ export default function GroupsPage() {
   const filteredGroups = groups.filter(group => {
     const matchesSearch = 
       group.groupCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      group.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       group.programName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       group.tutorName?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -182,19 +173,11 @@ export default function GroupsPage() {
   const columns: TableColumn<Group>[] = [
     { 
       key: "groupCode", 
-      label: "Código", 
+      label: "Código de Grupo", 
       icon: <Hash size={16} />,
       render: (item) => (
-        <span className="font-medium text-gray-900">{item.groupCode}</span>
-      )
-    },
-    { 
-      key: "groupName", 
-      label: "Grupo", 
-      icon: <Users size={16} />,
-      render: (item) => (
         <div>
-          <p className="font-medium text-gray-900">{item.groupName}</p>
+          <p className="font-medium text-gray-900">{item.groupCode}</p>
           <p className="text-xs text-gray-500 mt-0.5">
             {item.programCode} • Semestre {item.semester}
           </p>
@@ -224,31 +207,14 @@ export default function GroupsPage() {
     },
     {
       key: "enrollment",
-      label: "Matrícula",
+      label: "Estudiantes",
       icon: <BookOpen size={16} />,
       align: "center",
       render: (item) => (
         <div className="text-center">
-          <div className="flex items-center justify-center gap-1">
-            <span className="text-sm font-medium text-gray-900">
-              {item.enrolledStudents}
-            </span>
-            <span className="text-xs text-gray-500">
-              / {item.totalCapacity}
-            </span>
-          </div>
-          <div className="w-16 h-1.5 bg-gray-200 rounded-full mt-1 mx-auto">
-            <div 
-              className={`h-full rounded-full ${
-                (item.enrolledStudents! / item.totalCapacity!) > 0.9 
-                  ? 'bg-red-400' 
-                  : (item.enrolledStudents! / item.totalCapacity!) > 0.7 
-                    ? 'bg-yellow-400' 
-                    : 'bg-green-400'
-              }`}
-              style={{ width: `${(item.enrolledStudents! / item.totalCapacity!) * 100}%` }}
-            />
-          </div>
+          <span className="text-sm font-medium text-gray-900">
+            {item.enrolledStudents || 0}
+          </span>
         </div>
       )
     },
@@ -417,7 +383,7 @@ export default function GroupsPage() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -453,20 +419,6 @@ export default function GroupsPage() {
               <p className="text-sm font-medium text-gray-900">Estudiantes</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {filteredGroups.reduce((sum, g) => sum + (g.enrolledStudents || 0), 0)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">Capacidad Total</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {filteredGroups.reduce((sum, g) => sum + (g.totalCapacity || 0), 0)}
               </p>
             </div>
           </div>
