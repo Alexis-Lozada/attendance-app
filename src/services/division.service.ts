@@ -3,6 +3,7 @@ import { academicApi } from "@/services/api";
 export interface DivisionResponse {
     idDivision: number;
     idUniversity: number;
+    idCoordinator?: number;
     code: string;
     name: string;
     description: string;
@@ -30,6 +31,7 @@ export async function getDivisionById(id: number): Promise<DivisionResponse> {
 // === Crear nueva división ===
 export async function createDivision(payload: {
     idUniversity: number;
+    idCoordinator?: number;
     code: string;
     name: string;
     description: string;
@@ -45,6 +47,7 @@ export async function createDivision(payload: {
 export async function updateDivision(id: number, payload: {
     idDivision?: number;  // ✅ Hacer opcional para compatibilidad
     idUniversity: number;
+    idCoordinator?: number;
     code: string;
     name: string;
     description: string;
