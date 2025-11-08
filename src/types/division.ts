@@ -1,6 +1,12 @@
 export interface Division {
-  idDivision: number;
-  idCoordinator?: number;
-  name: string;
-  code: string;
+    id: number;
+    idUniversity: number;
+    idCoordinator?: number;
+    code: string;
+    name: string;
+    description: string;
+    status: boolean;
+    // Coordinator information (populated from user data)
+    coordinatorName?: string;
+    coordinatorImage?: string;
 }

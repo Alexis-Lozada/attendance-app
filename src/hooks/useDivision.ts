@@ -8,7 +8,9 @@ import {
   updateDivision,
   updateDivisionStatus,
 } from "@/services/division.service";
-import type { Division } from "@/components/divisions/DivisionsTypes";
+import { getUserById } from "@/services/user.service";
+import { getFileUrl } from "@/services/storage.service";
+import type { Division } from "@/types/division";
 
 /**
  * Hook personalizado para manejar divisiones académicas:
@@ -16,6 +18,7 @@ import type { Division } from "@/components/divisions/DivisionsTypes";
  * - Creación y edición
  * - Cambio de estado
  * - Manejo de modal y notificaciones
+ * - Carga de datos del coordinador
  */
 export function useDivision() {
   const { user } = useAuth();
@@ -32,7 +35,28 @@ export function useDivision() {
 
   const divisionsPerPage = 5;
 
-  // 🔹 Cargar divisiones
+  // 🔹 Helper function to load coordinator data
+  const loadCoordinatorData = async (idCoordinator?: number) => {
+    if (!idCoordinator) return { name: "Sin asignar", image: undefined };
+    
+    try {
+      const coordinator = await getUserById(idCoordinator);
+      const fullName = `${coordinator.firstName} ${coordinator.lastName}`;
+      
+      let imageUrl: string | undefined = undefined;
+      if (coordinator.profileImage) {
+        const url = await getFileUrl(coordinator.profileImage);
+        imageUrl = url || undefined;
+      }
+      
+      return { name: fullName, image: imageUrl };
+    } catch (error) {
+      console.error("Error loading coordinator data:", error);
+      return { name: "Error al cargar", image: undefined };
+    }
+  };
+
+  // 🔹 Cargar divisiones con datos del coordinador
   useEffect(() => {
     if (!user?.idUniversity) return;
 
@@ -40,14 +64,25 @@ export function useDivision() {
       try {
         setLoading(true);
         const data = await getDivisionsByUniversity(user.idUniversity);
-        const mapped = data.map((d) => ({
-          id: d.idDivision,
-          idUniversity: d.idUniversity,
-          code: d.code,
-          name: d.name,
-          description: d.description,
-          status: d.status,
-        }));
+        
+        // Load coordinator data for each division
+        const mapped = await Promise.all(
+          data.map(async (d) => {
+            const coordinatorData = await loadCoordinatorData(d.idCoordinator);
+            return {
+              id: d.idDivision,
+              idUniversity: d.idUniversity,
+              idCoordinator: d.idCoordinator,
+              code: d.code,
+              name: d.name,
+              description: d.description,
+              status: d.status,
+              coordinatorName: coordinatorData.name,
+              coordinatorImage: coordinatorData.image,
+            };
+          })
+        );
+        
         setDivisions(mapped);
       } catch (err) {
         console.error("Error al cargar divisiones:", err);
@@ -77,15 +112,21 @@ export function useDivision() {
         status: true, // ✅ activa por defecto
       });
 
+      // Load coordinator data for the new division
+      const coordinatorData = await loadCoordinatorData(newDivision.idCoordinator);
+
       setDivisions((prev) => [
         ...prev,
         {
           id: newDivision.idDivision,
           idUniversity: newDivision.idUniversity,
+          idCoordinator: newDivision.idCoordinator,
           code: newDivision.code,
           name: newDivision.name,
           description: newDivision.description,
           status: newDivision.status,
+          coordinatorName: coordinatorData.name,
+          coordinatorImage: coordinatorData.image,
         },
       ]);
 
@@ -110,16 +151,22 @@ export function useDivision() {
   const handleUpdateDivision = async (id: number, data: Omit<Division, "id">) => {
     try {
       const updated = await updateDivision(id, data);
+      
+      // Load coordinator data for the updated division
+      const coordinatorData = await loadCoordinatorData(updated.idCoordinator);
 
       setDivisions((prev) =>
         prev.map((d) =>
           d.id === id
             ? {
                 ...d,
+                idCoordinator: updated.idCoordinator,
                 code: updated.code,
                 name: updated.name,
                 description: updated.description,
                 status: updated.status,
+                coordinatorName: coordinatorData.name,
+                coordinatorImage: coordinatorData.image,
               }
             : d
         )
@@ -173,7 +220,8 @@ export function useDivision() {
     (d) =>
       d.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.description.toLowerCase().includes(searchTerm.toLowerCase())
+      d.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.coordinatorName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filtered.length / divisionsPerPage);
