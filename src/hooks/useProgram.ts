@@ -64,11 +64,8 @@ export function useProgram() {
         });
 
         setPrograms(programsWithDivision);
-        setDivisions(divisionsData.map(d => ({
-          idDivision: d.idDivision,
-          name: d.name,
-          code: d.code
-        })));
+        // ✅ Usar las divisiones completas directamente del servicio
+        setDivisions(divisionsData);
       } catch (err) {
         console.error("Error al cargar datos:", err);
         setToast({
