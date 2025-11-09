@@ -70,7 +70,7 @@ export function useDivision() {
           data.map(async (d) => {
             const coordinatorData = await loadCoordinatorData(d.idCoordinator);
             return {
-              id: d.idDivision,
+              idDivision: d.idDivision,
               idUniversity: d.idUniversity,
               idCoordinator: d.idCoordinator,
               code: d.code,
@@ -95,7 +95,7 @@ export function useDivision() {
   }, [user?.idUniversity]);
 
   // 🔹 Crear división
-  const handleSaveDivision = async (data: Omit<Division, "id">) => {
+  const handleSaveDivision = async (data: Omit<Division, "idDivision">) => {
     if (!user?.idUniversity) {
       setToast({
         title: "Error",
@@ -118,7 +118,7 @@ export function useDivision() {
       setDivisions((prev) => [
         ...prev,
         {
-          id: newDivision.idDivision,
+          idDivision: newDivision.idDivision,
           idUniversity: newDivision.idUniversity,
           idCoordinator: newDivision.idCoordinator,
           code: newDivision.code,
@@ -148,7 +148,7 @@ export function useDivision() {
   };
 
   // 🔹 Editar división
-  const handleUpdateDivision = async (id: number, data: Omit<Division, "id">) => {
+  const handleUpdateDivision = async (id: number, data: Omit<Division, "idDivision">) => {
     try {
       const updated = await updateDivision(id, data);
       
@@ -157,7 +157,7 @@ export function useDivision() {
 
       setDivisions((prev) =>
         prev.map((d) =>
-          d.id === id
+          d.idDivision === id
             ? {
                 ...d,
                 idCoordinator: updated.idCoordinator,
@@ -195,7 +195,7 @@ export function useDivision() {
       const updated = await updateDivisionStatus(id, !currentStatus);
 
       setDivisions((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, status: updated.status } : d))
+        prev.map((d) => (d.idDivision === id ? { ...d, status: updated.status } : d))
       );
 
       setToast({

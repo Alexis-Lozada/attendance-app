@@ -94,7 +94,7 @@ export default function DivisionsPage() {
       render: (item) => (
         <Switch
           checked={item.status}
-          onChange={() => handleToggleStatus(item.id, item.status)}
+          onChange={() => handleToggleStatus(item.idDivision, item.status)}
         />
       ),
     },

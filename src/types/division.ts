@@ -1,5 +1,5 @@
 export interface Division {
-    id: number;
+    idDivision: number;
     idUniversity: number;
     idCoordinator?: number;
     code: string;

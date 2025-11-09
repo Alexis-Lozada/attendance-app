@@ -11,7 +11,7 @@ import type { User as UserType } from "@/types/user";
 
 interface Props {
   initialData?: Division | null; // 🔹 null → nuevo registro
-  onSave: (data: Omit<Division, "id">, id?: number) => void;
+  onSave: (data: Omit<Division, "idDivision">, id?: number) => void;
   onCancel: () => void;
 }
 
@@ -21,7 +21,7 @@ interface UserWithImage extends UserType {
 
 export default function DivisionForm({ initialData, onSave, onCancel }: Props) {
   const { user } = useAuth();
-  const [formData, setFormData] = useState<Omit<Division, "id">>({
+  const [formData, setFormData] = useState<Omit<Division, "idDivision">>({
     idUniversity: 0,
     idCoordinator: undefined,
     code: "",
@@ -92,7 +92,7 @@ export default function DivisionForm({ initialData, onSave, onCancel }: Props) {
     }
   }, [initialData]);
 
-  const handleChange = (field: keyof Omit<Division, "id">, value: string | number | undefined) => {
+  const handleChange = (field: keyof Omit<Division, "idDivision">, value: string | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -101,7 +101,7 @@ export default function DivisionForm({ initialData, onSave, onCancel }: Props) {
       alert("Por favor completa todos los campos obligatorios.");
       return;
     }
-    onSave(formData, initialData?.id); // 🔹 si tiene id, es edición
+    onSave(formData, initialData?.idDivision); // 🔹 si tiene idDivision, es edición
   };
 
   const selectedUser = users.find(u => u.idUser === formData.idCoordinator);
