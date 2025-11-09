@@ -122,7 +122,7 @@ export default function DivisionsPage() {
   ];
 
   // 🔹 Guardar o editar según corresponda
-  const handleSave = (data: Omit<Division, "id">, id?: number) => {
+  const handleSave = (data: Omit<Division, "idDivision">, id?: number) => {
     if (id) handleUpdateDivision(id, data);
     else handleSaveDivision(data);
   };
