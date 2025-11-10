@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import UniversityDetailsCard from "@/components/university/UniversityDetailsCard";
 import ThemeColorCard from "@/components/university/ThemeColorCard";
 import SystemSettingsCard from "@/components/university/SystemSettingsCard";
+import Spinner from "@/components/ui/Spinner";
 import { University } from "@/types/university";
 import { getUniversityById, getLogoUrl } from "@/services/university.service";
 import { useAuth } from "@/context/AuthContext";
@@ -44,8 +45,7 @@ export default function UniversityPage() {
     loadUniversity();
   }, [user?.idUniversity]);
 
-  if (!user) return <p className="text-gray-500">Iniciando sesión...</p>;
-  if (loading) return <p className="text-gray-500">Cargando...</p>;
+  if (loading) return <Spinner text="Cargando universidad..." fullScreen />;
   if (!university)
     return <p className="text-red-500">No se pudo cargar la universidad.</p>;
 

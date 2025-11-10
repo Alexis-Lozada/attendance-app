@@ -2,6 +2,7 @@ import "./globals.css";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import "@/utils/errorSuppression";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -9,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-  title: "Attendance Client",
+  title: "Roster | Sistema de pase de asistencia",
   description: "Sistema de pase de asistencia",
 };
 

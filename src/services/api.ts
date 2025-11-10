@@ -57,7 +57,7 @@ export const chatApi = axios.create({
 });
 
 // === Interceptores globales para tokens ===
-const apis = [usersApi, academicApi, storageApi, chatApi]; // 🆕 agregado
+const apis = [usersApi, academicApi, storageApi, chatApi];
 
 apis.forEach((api) => {
   api.interceptors.request.use((config) => {
@@ -70,7 +70,9 @@ apis.forEach((api) => {
     (response) => response,
     async (error) => {
       const originalRequest = error.config;
-      if (error.response?.status === 403 && !originalRequest._retry) {
+      
+      // 🔹 Manejo de errores de autenticación (solo 401 y 403 para refresh token)
+      if (error.response?.status === 401 || (error.response?.status === 403 && !originalRequest._retry)) {
         const refreshToken = getRefreshToken();
         if (refreshToken) {
           originalRequest._retry = true;
@@ -85,8 +87,37 @@ apis.forEach((api) => {
               window.location.href = "/login";
             }
           }
+        } else {
+          // Sin refresh token, redirigir al login
+          clearTokens();
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
         }
+        return Promise.reject(error);
       }
+
+      // 🔹 Para errores de lógica de negocio (400, 404, 422, etc.)
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        // Extraer mensaje de diferentes formatos posibles
+        const errorMessage = 
+          errorData.error || 
+          errorData.message || 
+          (typeof errorData === 'string' ? errorData : null) ||
+          'Error desconocido';
+
+        const businessLogicError = new Error(errorMessage);
+        
+        // Mantener información adicional del error original
+        (businessLogicError as any).status = error.response.status;
+        (businessLogicError as any).response = error.response;
+        (businessLogicError as any).isBusinessLogicError = true;
+        
+        return Promise.reject(businessLogicError);
+      }
+
       return Promise.reject(error);
     }
   );

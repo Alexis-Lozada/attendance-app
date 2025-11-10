@@ -41,11 +41,11 @@ export function useProfile(idUser: number) {
         const uni = await getUniversityById(user.idUniversity);
         setUniversityName(uni.name);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cargando perfil:", error);
       setToast({
-        title: "Error",
-        description: "No se pudo cargar la información del perfil.",
+        title: "No se pudo cargar la información del perfil",
+        description: error?.message,
         type: "error",
       });
     } finally {
@@ -63,11 +63,11 @@ export function useProfile(idUser: number) {
         description: "Los cambios se han guardado correctamente.",
         type: "success",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error actualizando perfil:", error);
       setToast({
-        title: "Error",
-        description: "No se pudo actualizar el perfil.",
+        title: "No se pudo actualizar el perfil",
+        description: error?.message,
         type: "error",
       });
     }
@@ -92,11 +92,11 @@ export function useProfile(idUser: number) {
         description: "Tu foto de perfil se ha actualizado correctamente.",
         type: "success",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cambiando imagen:", error);
       setToast({
-        title: "Error",
-        description: "No se pudo cambiar la imagen de perfil.",
+        title: "No se pudo cambiar la imagen de perfil",
+        description: error?.message,
         type: "error",
       });
     } finally {
@@ -128,10 +128,8 @@ export function useProfile(idUser: number) {
     } catch (error: any) {
       console.error("Error cambiando contraseña:", error);
       setToast({
-        title: "Error",
-        description:
-          error?.response?.data?.message ||
-          "No se pudo cambiar la contraseña.",
+        title: "No se pudo cambiar la contraseña",
+        description: error?.message,
         type: "error",
       });
     } finally {
