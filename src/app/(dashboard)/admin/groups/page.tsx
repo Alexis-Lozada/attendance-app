@@ -75,10 +75,10 @@ export default function GroupsPage() {
       label: "Código de Grupo", 
       icon: <Hash size={16} />,
       render: (item) => (
-        <div>
+        <div className="min-w-[100px]">
           <p className="font-medium text-gray-900">{item.groupCode}</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            {item.programCode} • Semestre {item.semester}
+            {item.programCode} • {item.semester}°
           </p>
         </div>
       )
@@ -88,35 +88,44 @@ export default function GroupsPage() {
       label: "Programa Educativo",
       icon: <GraduationCap size={16} />,
       render: (item) => (
-        <div className="max-w-xs">
+        <div className="max-w-[200px]">
           <p className="text-sm text-gray-900 font-medium">{item.programCode}</p>
           <p className="text-xs text-gray-500 truncate" title={item.programName}>
             {item.programName}
           </p>
           {item.divisionName && (
-            <p className="text-xs text-gray-400 mt-0.5">División: {item.divisionName}</p>
+            <p className="text-xs text-gray-400 truncate mt-0.5" title={`División: ${item.divisionName}`}>
+              División: {item.divisionName}
+            </p>
           )}
         </div>
       )
     },
     {
       key: "tutor",
-      label: "Tutor Asignado",
-      icon: <UserCheck size={16} />,
+      label: "Tutor",
+      icon: <User size={16} />,
       render: (item) => (
         <div className="flex items-center gap-3">
           {item.tutorImage ? (
             <img
               src={item.tutorImage}
               alt={item.tutorName || "Tutor"}
-              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+              className="w-8 h-8 aspect-square rounded-md object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 aspect-square rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0">
               <User className="w-4 h-4 text-gray-500" />
             </div>
           )}
-          <span className="text-sm text-gray-700">{item.tutorName}</span>
+          <div>
+            <p className="text-sm font-medium text-gray-900">
+              {item.tutorName || "Sin asignar"}
+            </p>
+            {item.tutorName && item.tutorName !== "Sin asignar" && (
+              <p className="text-xs text-gray-500">Tutor</p>
+            )}
+          </div>
         </div>
       )
     },
@@ -195,7 +204,7 @@ export default function GroupsPage() {
           <p className="text-[13px] text-gray-500">
             Gestiona los grupos de estudiantes organizados por programa educativo y semestre.
             {userRole === UserRole.COORDINATOR && (
-              <span className="block mt-1 text-primary">
+              <span className="block mt-1 text-blue-600">
                 Mostrando solo grupos de los programas de tu división.
               </span>
             )}
