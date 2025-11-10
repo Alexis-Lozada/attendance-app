@@ -7,6 +7,7 @@ import Table, { TableColumn } from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
 import Switch from "@/components/ui/Switch";
+import Spinner from "@/components/ui/Spinner";
 import DivisionForm from "@/components/divisions/DivisionForm";
 import { useDivision } from "@/hooks/useDivision";
 import type { Division } from "@/types/division";
@@ -31,7 +32,7 @@ export default function DivisionsPage() {
 
   const [selectedDivision, setSelectedDivision] = useState<Division | null>(null);
 
-  if (loading) return <p className="text-gray-500">Cargando divisiones...</p>;
+  if (loading) return <Spinner text="Cargando divisiones académicas..." fullScreen />;
 
   // 🔹 Configuración de columnas
   const columns: TableColumn<Division>[] = [
