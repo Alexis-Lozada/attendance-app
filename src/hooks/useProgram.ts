@@ -64,13 +64,12 @@ export function useProgram() {
         });
 
         setPrograms(programsWithDivision);
-        // ✅ Usar las divisiones completas directamente del servicio
         setDivisions(divisionsData);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error al cargar datos:", err);
         setToast({
           title: "Error de carga",
-          description: "No se pudieron cargar los programas educativos.",
+          description: err?.message || "No se pudieron cargar los programas educativos.",
           type: "error",
         });
       } finally {
@@ -139,11 +138,11 @@ export function useProgram() {
         type: "success",
       });
       setIsModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creando programa:", err);
       setToast({
         title: "Error al crear programa",
-        description: "No se pudo registrar el nuevo programa educativo.",
+        description: err?.message || "No se pudo registrar el nuevo programa educativo.",
         type: "error",
       });
     } finally {
@@ -181,11 +180,11 @@ export function useProgram() {
         type: "success",
       });
       setIsModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al actualizar programa:", err);
       setToast({
         title: "Error al actualizar programa",
-        description: "No se pudieron aplicar los cambios.",
+        description: err?.message || "No se pudieron aplicar los cambios.",
         type: "error",
       });
     } finally {
@@ -209,11 +208,11 @@ export function useProgram() {
         } correctamente.`,
         type: "success",
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al actualizar estado:", err);
       setToast({
         title: "Error al actualizar estado",
-        description: "No se pudo cambiar el estado del programa.",
+        description: err?.message || "No se pudo cambiar el estado del programa.",
         type: "error",
       });
     }

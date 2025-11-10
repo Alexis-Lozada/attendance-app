@@ -84,8 +84,13 @@ export function useDivision() {
         );
         
         setDivisions(mapped);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error al cargar divisiones:", err);
+        setToast({
+          title: "Error al cargar divisiones",
+          description: err?.message || "No se pudieron cargar las divisiones.",
+          type: "error",
+        });
       } finally {
         setLoading(false);
       }
@@ -137,11 +142,11 @@ export function useDivision() {
       });
 
       setIsModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creando división:", err);
       setToast({
         title: "Error al crear la división",
-        description: "No se pudo registrar la nueva división.",
+        description: err?.message || "No se pudo registrar la nueva división.",
         type: "error",
       });
     }
@@ -179,11 +184,11 @@ export function useDivision() {
       });
 
       setIsModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al actualizar división:", err);
       setToast({
         title: "Error al actualizar división",
-        description: "No se pudieron aplicar los cambios.",
+        description: err?.message || "No se pudieron aplicar los cambios.",
         type: "error",
       });
     }
@@ -205,11 +210,11 @@ export function useDivision() {
         } correctamente.`,
         type: "success",
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error al actualizar estado:", err);
       setToast({
         title: "Error al actualizar estado",
-        description: "No se pudo cambiar el estado de la división.",
+        description: err?.message || "No se pudo cambiar el estado de la división.",
         type: "error",
       });
     }
