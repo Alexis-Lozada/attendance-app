@@ -72,7 +72,7 @@ export default function GroupsPage() {
   const columns: TableColumn<GroupWithDetails>[] = [
     { 
       key: "groupCode", 
-      label: "Código de Grupo", 
+      label: "Grupo", 
       icon: <Hash size={16} />,
       render: (item) => (
         <div className="min-w-[100px]">
