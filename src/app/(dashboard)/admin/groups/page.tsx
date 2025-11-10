@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { 
   Plus, 
   Users, 
@@ -11,7 +10,8 @@ import {
   MoreVertical, 
   Edit2,
   UserCheck,
-  BookOpen
+  BookOpen,
+  User
 } from "lucide-react";
 
 import Table, { TableColumn } from "@/components/ui/Table";
@@ -19,158 +19,57 @@ import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
 import Switch from "@/components/ui/Switch";
 import Spinner from "@/components/ui/Spinner";
-
-// Mock data types (will be replaced with actual types later)
-interface Group {
-  idGroup: number;
-  idProgram: number;
-  idTutor: number;
-  groupCode: string;
-  semester: string;
-  academicYear: string;
-  status: boolean;
-  // Additional fields for display
-  programName?: string;
-  programCode?: string;
-  tutorName?: string;
-  enrolledStudents?: number;
-}
-
-interface Program {
-  idProgram: number;
-  programCode: string;
-  programName: string;
-}
-
-interface Tutor {
-  idUser: number;
-  firstName: string;
-  lastName: string;
-}
-
-// Mock data
-const mockGroups: Group[] = [
-  {
-    idGroup: 1,
-    idProgram: 1,
-    idTutor: 1,
-    groupCode: "IDGS12-A",
-    semester: "12",
-    academicYear: "2024-2025",
-    status: true,
-    programName: "Ingeniería en Desarrollo y Gestión de Software",
-    programCode: "IDGS",
-    tutorName: "Dr. Juan Pérez",
-    enrolledStudents: 28
-  },
-  {
-    idGroup: 2,
-    idProgram: 1,
-    idTutor: 2,
-    groupCode: "IDGS10-B",
-    semester: "10",
-    academicYear: "2024-2025",
-    status: true,
-    programName: "Ingeniería en Desarrollo y Gestión de Software",
-    programCode: "IDGS",
-    tutorName: "Mtra. María González",
-    enrolledStudents: 32
-  },
-  {
-    idGroup: 3,
-    idProgram: 2,
-    idTutor: 3,
-    groupCode: "ISC08-A",
-    semester: "8",
-    academicYear: "2024-2025",
-    status: false,
-    programName: "Ingeniería en Sistemas Computacionales",
-    programCode: "ISC",
-    tutorName: "Ing. Carlos López",
-    enrolledStudents: 15
-  }
-];
-
-const mockPrograms: Program[] = [
-  { idProgram: 1, programCode: "IDGS", programName: "Ingeniería en Desarrollo y Gestión de Software" },
-  { idProgram: 2, programCode: "ISC", programName: "Ingeniería en Sistemas Computacionales" },
-  { idProgram: 3, programCode: "LAE", programName: "Licenciatura en Administración de Empresas" }
-];
+import GroupForm from "@/components/groups/GroupForm";
+import { useGroup } from "@/hooks/useGroup";
+import { UserRole, RoleLabels } from "@/types/roles";
+import type { GroupWithDetails } from "@/types/group";
 
 export default function GroupsPage() {
-  const [groups, setGroups] = useState<Group[]>(mockGroups);
-  const [programs] = useState<Program[]>(mockPrograms);
-  const [loading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProgram, setSelectedProgram] = useState<number | "all">("all");
-  const [selectedSemester, setSelectedSemester] = useState<string | "all">("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [toast, setToast] = useState<{
-    title: string;
-    description?: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  const groupsPerPage = 5;
-
-  // Filtered groups logic
-  const filteredGroups = groups.filter(group => {
-    const matchesSearch = 
-      group.groupCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      group.programName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      group.tutorName?.toLowerCase().includes(searchTerm.toLowerCase());
+  const {
+    // Data
+    groups,
+    programs,
+    tutors,
+    filteredGroups,
+    totalGroups,
+    uniqueSemesters,
     
-    const matchesProgram = selectedProgram === "all" || group.idProgram === selectedProgram;
-    const matchesSemester = selectedSemester === "all" || group.semester === selectedSemester;
+    // Pagination
+    currentPage,
+    totalPages,
+    setCurrentPage,
     
-    return matchesSearch && matchesProgram && matchesSemester;
-  });
-
-  const totalPages = Math.ceil(filteredGroups.length / groupsPerPage);
-  const currentGroups = filteredGroups.slice(
-    (currentPage - 1) * groupsPerPage,
-    currentPage * groupsPerPage
-  );
-
-  // Get unique semesters for filter
-  const uniqueSemesters = [...new Set(groups.map(g => g.semester))].sort();
-
-  // Mock handlers (will be implemented later)
-  const handleToggleStatus = (idGroup: number, currentStatus: boolean) => {
-    console.log("Toggle status for group:", idGroup, "to:", !currentStatus);
-    setToast({
-      title: !currentStatus ? "Grupo activado" : "Grupo desactivado",
-      description: `El grupo fue ${!currentStatus ? "activado" : "desactivado"} correctamente.`,
-      type: "success",
-    });
-  };
-
-  const handleEdit = (group: Group) => {
-    setSelectedGroup(group);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenAdd = () => {
-    setSelectedGroup(null);
-    setIsModalOpen(true);
-  };
-
-  const handleProgramChange = (programId: number | "all") => {
-    setSelectedProgram(programId);
-    setCurrentPage(1);
-  };
-
-  const handleSemesterChange = (semester: string | "all") => {
-    setSelectedSemester(semester);
-    setCurrentPage(1);
-  };
+    // Filters
+    searchTerm,
+    selectedProgram,
+    selectedSemester,
+    setSearchTerm,
+    handleProgramChange,
+    handleSemesterChange,
+    
+    // Modal & Form
+    isModalOpen,
+    setIsModalOpen,
+    selectedGroup,
+    formLoading,
+    
+    // Actions
+    handleSaveGroup,
+    handleToggleStatus,
+    handleEdit,
+    handleOpenAdd,
+    
+    // State
+    loading,
+    toast,
+    setToast,
+    userRole,
+  } = useGroup();
 
   if (loading) return <Spinner text="Cargando grupos académicos..." fullScreen />;
 
   // Table columns configuration
-  const columns: TableColumn<Group>[] = [
+  const columns: TableColumn<GroupWithDetails>[] = [
     { 
       key: "groupCode", 
       label: "Código de Grupo", 
@@ -194,6 +93,9 @@ export default function GroupsPage() {
           <p className="text-xs text-gray-500 truncate" title={item.programName}>
             {item.programName}
           </p>
+          {item.divisionName && (
+            <p className="text-xs text-gray-400 mt-0.5">División: {item.divisionName}</p>
+          )}
         </div>
       )
     },
@@ -202,7 +104,20 @@ export default function GroupsPage() {
       label: "Tutor Asignado",
       icon: <UserCheck size={16} />,
       render: (item) => (
-        <span className="text-sm text-gray-700">{item.tutorName}</span>
+        <div className="flex items-center gap-3">
+          {item.tutorImage ? (
+            <img
+              src={item.tutorImage}
+              alt={item.tutorName || "Tutor"}
+              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-gray-500" />
+            </div>
+          )}
+          <span className="text-sm text-gray-700">{item.tutorName}</span>
+        </div>
       )
     },
     {
@@ -213,8 +128,9 @@ export default function GroupsPage() {
       render: (item) => (
         <div className="text-center">
           <span className="text-sm font-medium text-gray-900">
-            {item.enrolledStudents || 0}
+            {item.enrollmentCount || 0}
           </span>
+          <p className="text-xs text-gray-500">inscritos</p>
         </div>
       )
     },
@@ -278,6 +194,11 @@ export default function GroupsPage() {
           </h3>
           <p className="text-[13px] text-gray-500">
             Gestiona los grupos de estudiantes organizados por programa educativo y semestre.
+            {userRole === UserRole.COORDINATOR && (
+              <span className="block mt-1 text-primary">
+                Mostrando solo grupos de los programas de tu división.
+              </span>
+            )}
           </p>
         </div>
 
@@ -328,37 +249,41 @@ export default function GroupsPage() {
           </div>
 
           {/* Semester filter */}
-          <div className="flex items-center gap-2 lg:ml-6">
-            <Calendar className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Semestre:</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleSemesterChange("all")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                selectedSemester === "all"
-                  ? "bg-primary text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Todos
-            </button>
-            
-            {uniqueSemesters.map((semester) => (
-              <button
-                key={semester}
-                onClick={() => handleSemesterChange(semester)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                  selectedSemester === semester
-                    ? "bg-primary text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {semester}°
-              </button>
-            ))}
-          </div>
+          {uniqueSemesters.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 lg:ml-6">
+                <Calendar className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Semestre:</span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleSemesterChange("all")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                    selectedSemester === "all"
+                      ? "bg-primary text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Todos
+                </button>
+                
+                {uniqueSemesters.map((semester) => (
+                  <button
+                    key={semester}
+                    onClick={() => handleSemesterChange(semester)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                      selectedSemester === semester
+                        ? "bg-primary text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {semester}°
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Active filters info */}
@@ -391,7 +316,12 @@ export default function GroupsPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900">Total Grupos</p>
-              <p className="text-2xl font-semibold text-gray-900">{filteredGroups.length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{totalGroups}</p>
+              {filteredGroups.length !== totalGroups && (
+                <p className="text-xs text-gray-500">
+                  de {filteredGroups.length} filtrados
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -418,7 +348,7 @@ export default function GroupsPage() {
             <div>
               <p className="text-sm font-medium text-gray-900">Estudiantes</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {filteredGroups.reduce((sum, g) => sum + (g.enrolledStudents || 0), 0)}
+                {filteredGroups.reduce((sum, g) => sum + (g.enrollmentCount || 0), 0)}
               </p>
             </div>
           </div>
@@ -430,14 +360,14 @@ export default function GroupsPage() {
         title={
           selectedProgram === "all" && selectedSemester === "all"
             ? "Grupos Académicos Registrados"
-            : `Grupos Filtrados`
+            : "Grupos Filtrados"
         }
         columns={columns}
-        data={currentGroups}
+        data={groups}
         currentPage={currentPage}
         totalPages={totalPages}
-        currentItemsCount={currentGroups.length}
-        totalItemsCount={filteredGroups.length}
+        currentItemsCount={groups.length}
+        totalItemsCount={totalGroups}
         onPreviousPage={() => setCurrentPage(p => Math.max(p - 1, 1))}
         onNextPage={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
         onSearch={setSearchTerm}
@@ -448,34 +378,20 @@ export default function GroupsPage() {
         }
       />
 
-      {/* Modal for create/edit (placeholder) */}
+      {/* Modal for create/edit */}
       <Modal
         title={selectedGroup ? "Editar grupo académico" : "Agregar nuevo grupo"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       >
-        <div className="space-y-4">
-          <div className="text-center py-8">
-            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">
-              Formulario de {selectedGroup ? "edición" : "creación"} de grupo en desarrollo
-            </p>
-          </div>
-          
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="border border-gray-300 text-gray-700 text-sm font-medium rounded-md px-4 py-2 hover:bg-gray-100 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              className="bg-primary text-white text-sm font-medium rounded-md px-4 py-2 hover:brightness-95 transition"
-            >
-              {selectedGroup ? "Guardar Cambios" : "Guardar Grupo"}
-            </button>
-          </div>
-        </div>
+        <GroupForm
+          initialData={selectedGroup}
+          programs={programs}
+          tutors={tutors}
+          onSave={handleSaveGroup}
+          onCancel={() => setIsModalOpen(false)}
+          loading={formLoading}
+        />
       </Modal>
     </>
   );
