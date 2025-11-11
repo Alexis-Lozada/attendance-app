@@ -2,27 +2,36 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUsersByUniversity, getUserById, updateUserProfile } from "@/services/user.service";
+import {
+  getUsersByUniversity,
+  getUserById,
+  updateUserProfile,
+  updateUserStatus,
+} from "@/services/user.service";
 import { getFileUrl } from "@/services/storage.service";
 import { UserRole } from "@/types/roles";
-import type { UserWithDetails, UserFormData } from "@/types/user";
+import type { User } from "@/types/user";
+
+interface UserWithImage extends User {
+  profileImageUrl?: string;
+  fullName: string;
+}
 
 /**
- * Custom hook for user management:
- * - Loading users with role-based access control
- * - Search, pagination, and filtering by role
- * - Creation and editing of users
- * - Status management (activate/deactivate)
- * - Modal and toast notifications handling
- * - Profile image loading
+ * Hook personalizado para manejar usuarios:
+ * - Carga con control de roles (ADMIN ve todos excepto ADMIN, COORDINATOR ve TUTOR, TEACHER, STUDENT)
+ * - Búsqueda, paginación y filtrado por rol
+ * - Edición de usuarios (sin contraseña ni rol)
+ * - Cambio de estado
+ * - Manejo de modal y notificaciones
  */
 export function useUser() {
   const { user } = useAuth();
-  const [users, setUsers] = useState<UserWithDetails[]>([]);
+  const [users, setUsers] = useState<UserWithImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState<UserRole | "all">("all");
+  const [selectedRole, setSelectedRole] = useState<string | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState<{
     title: string;
@@ -30,36 +39,55 @@ export function useUser() {
     type: "success" | "error";
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithImage | null>(null);
 
-  const usersPerPage = 5;
+  const usersPerPage = 8;
 
-  // Helper function to load profile image
-  const loadProfileImage = async (profileImageUuid?: string): Promise<string | undefined> => {
-    if (!profileImageUuid) return undefined;
+  // Helper function to load user profile image
+  const loadUserImage = async (profileImage?: string) => {
+    if (!profileImage) return undefined;
     
     try {
-      const url = await getFileUrl(profileImageUuid);
+      const url = await getFileUrl(profileImage);
       return url || undefined;
     } catch (error) {
-      console.error("Error loading profile image:", error);
+      console.error("Error loading user image:", error);
       return undefined;
     }
   };
 
-  // Load users with role-based access control
+  // Filter users based on current user role
+  const filterUsersByRole = (allUsers: User[]) => {
+    if (user?.role === UserRole.ADMIN) {
+      // ADMIN can see all users except other ADMINs
+      return allUsers.filter(u => u.role !== UserRole.ADMIN);
+    } else if (user?.role === UserRole.COORDINATOR) {
+      // COORDINATOR can only see TUTOR, TEACHER, and STUDENT
+      return allUsers.filter(u => 
+        [UserRole.TUTOR, UserRole.TEACHER, UserRole.STUDENT].includes(u.role as UserRole)
+      );
+    }
+    
+    // Default: return empty array for other roles
+    return [];
+  };
+
+  // Load users data
   useEffect(() => {
     if (!user?.idUniversity) return;
 
-    const loadUsers = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
-        const usersData = await getUsersByUniversity(user.idUniversity);
+        const allUsers = await getUsersByUniversity(user.idUniversity);
         
-        // Load profile images and additional data
-        const usersWithDetails = await Promise.all(
-          usersData.map(async (userData) => {
-            const profileImageUrl = await loadProfileImage(userData.profileImage);
+        // Filter users based on current user role
+        const filteredUsers = filterUsersByRole(allUsers);
+        
+        // Load profile images and format user data
+        const usersWithImages = await Promise.all(
+          filteredUsers.map(async (userData) => {
+            const profileImageUrl = await loadUserImage(userData.profileImage);
             
             return {
               ...userData,
@@ -69,59 +97,12 @@ export function useUser() {
           })
         );
 
-        // Filter users based on current user's role and academic hierarchy
-        let filteredUsers = usersWithDetails;
-        
-        switch (user.role) {
-          case UserRole.ADMIN:
-            // Admins can see everyone - no filtering
-            break;
-            
-          case UserRole.COORDINATOR:
-            // Coordinators can see users from their academic division
-            filteredUsers = usersWithDetails.filter(u => 
-              u.role === UserRole.STUDENT || 
-              u.role === UserRole.TUTOR || 
-              u.role === UserRole.TEACHER || // Coordinators manage teachers in their division
-              u.idUser === user.idUser
-            );
-            break;
-            
-          case UserRole.TUTOR:
-            // Tutors can see students in their assigned groups
-            filteredUsers = usersWithDetails.filter(u => 
-              u.role === UserRole.STUDENT || 
-              u.idUser === user.idUser
-            );
-            break;
-            
-          case UserRole.TEACHER:
-            // Teachers can see students in their courses
-            filteredUsers = usersWithDetails.filter(u => 
-              u.role === UserRole.STUDENT || 
-              u.idUser === user.idUser
-            );
-            break;
-            
-          case UserRole.STUDENT:
-            // Students can only see their own profile and basic info of classmates
-            filteredUsers = usersWithDetails.filter(u => 
-              u.idUser === user.idUser ||
-              (u.role === UserRole.STUDENT && u.status) // Only active students
-            );
-            break;
-            
-          default:
-            // Basic users can only see their own profile
-            filteredUsers = usersWithDetails.filter(u => u.idUser === user.idUser);
-        }
-
-        setUsers(filteredUsers);
+        setUsers(usersWithImages);
       } catch (err: any) {
         console.error("Error loading users:", err);
         setToast({
-          title: "Error al cargar usuarios",
-          description: err?.message || "No se pudieron cargar los usuarios del sistema.",
+          title: "Error de carga",
+          description: err?.message || "No se pudieron cargar los usuarios.",
           type: "error",
         });
       } finally {
@@ -129,14 +110,13 @@ export function useUser() {
       }
     };
 
-    loadUsers();
-  }, [user?.idUniversity, user?.role, user?.idUser]);
+    loadData();
+  }, [user?.idUniversity, user?.role]);
 
   // Filtering and pagination
   const filteredUsers = users.filter(userData => {
     const matchesSearch = 
-      userData.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      userData.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userData.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       userData.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       userData.enrollmentNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -151,76 +131,55 @@ export function useUser() {
     currentPage * usersPerPage
   );
 
-  // Get unique roles for filter (only roles present in the data)
-  const availableRoles = [...new Set(users.map(u => u.role))] as UserRole[];
+  // Get unique roles for filter (only from available users)
+  const availableRoles = [...new Set(users.map(u => u.role))].sort();
 
-  // Create user (mock implementation)
-  const handleCreateUser = async (data: UserFormData) => {
+  // Update user status (activate/deactivate)
+  const handleToggleStatus = async (idUser: number, currentStatus: boolean) => {
     try {
-      setFormLoading(true);
-      
-      // Mock API call - in reality this would call createUser service
-      console.log("Creating user:", data);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock new user data
-      const newUser: UserWithDetails = {
-        idUser: Math.max(...users.map(u => u.idUser)) + 1,
-        idUniversity: user?.idUniversity || 1,
-        email: data.email,
-        enrollmentNumber: data.enrollmentNumber,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: data.role,
-        status: data.status,
-        fullName: `${data.firstName} ${data.lastName}`,
-        createdAt: new Date().toISOString(),
-      };
+      const updated = await updateUserStatus(idUser, !currentStatus);
 
-      setUsers(prev => [...prev, newUser]);
+      setUsers(prev =>
+        prev.map(u => (u.idUser === idUser ? { ...u, status: updated.status } : u))
+      );
+
       setToast({
-        title: "Usuario creado",
-        description: "El nuevo usuario se agregó exitosamente al sistema.",
+        title: updated.status ? "Usuario activado" : "Usuario desactivado",
+        description: `El usuario fue ${
+          updated.status ? "activado" : "desactivado"
+        } correctamente.`,
         type: "success",
       });
-      setIsModalOpen(false);
     } catch (err: any) {
-      console.error("Error creating user:", err);
+      console.error("Error updating user status:", err);
       setToast({
-        title: "Error al crear usuario",
-        description: err?.message || "No se pudo registrar el nuevo usuario.",
+        title: "Error al actualizar estado",
+        description: err?.message || "No se pudo cambiar el estado del usuario.",
         type: "error",
       });
-    } finally {
-      setFormLoading(false);
     }
   };
 
-  // Update user (mock implementation)
-  const handleUpdateUser = async (idUser: number, data: UserFormData) => {
+  // Update user profile (without password and role)
+  const handleUpdateUser = async (idUser: number, data: Partial<User>) => {
     try {
       setFormLoading(true);
       
-      // Mock API call - in reality this would call updateUser service
-      console.log("Updating user:", idUser, data);
+      // Exclude password and role from update data
+      const { role, ...updateData } = data as any;
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      const updated = await updateUserProfile(idUser, updateData);
+      
+      // Reload user image if profile image was updated
+      const profileImageUrl = await loadUserImage(updated.profileImage);
+      
       setUsers(prev =>
         prev.map(u =>
           u.idUser === idUser
             ? {
-                ...u,
-                email: data.email,
-                enrollmentNumber: data.enrollmentNumber,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                role: data.role,
-                status: data.status,
-                fullName: `${data.firstName} ${data.lastName}`,
+                ...updated,
+                profileImageUrl,
+                fullName: `${updated.firstName} ${updated.lastName}`,
               }
             : u
         )
@@ -244,64 +203,19 @@ export function useUser() {
     }
   };
 
-  // Toggle user status (mock implementation)
-  const handleToggleStatus = async (idUser: number, currentStatus: boolean) => {
-    try {
-      // Mock API call - in reality this would call updateUserStatus service
-      console.log("Toggling user status:", idUser, !currentStatus);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setUsers(prev =>
-        prev.map(u => (u.idUser === idUser ? { ...u, status: !currentStatus } : u))
-      );
-
-      setToast({
-        title: !currentStatus ? "Usuario activado" : "Usuario desactivado",
-        description: `El usuario fue ${
-          !currentStatus ? "activado" : "desactivado"
-        } correctamente.`,
-        type: "success",
-      });
-    } catch (err: any) {
-      console.error("Error toggling user status:", err);
-      setToast({
-        title: "Error al actualizar estado",
-        description: err?.message || "No se pudo cambiar el estado del usuario.",
-        type: "error",
-      });
-    }
-  };
-
-  // Save user (create or update)
-  const handleSaveUser = async (data: UserFormData, idUser?: number) => {
-    if (idUser) {
-      await handleUpdateUser(idUser, data);
-    } else {
-      await handleCreateUser(data);
-    }
-  };
-
   // Change role filter
-  const handleRoleChange = (role: UserRole | "all") => {
+  const handleRoleChange = (role: string | "all") => {
     setSelectedRole(role);
     setCurrentPage(1);
   };
 
   // Open modal for editing
-  const handleEdit = (userData: UserWithDetails) => {
+  const handleEdit = (userData: UserWithImage) => {
     setSelectedUser(userData);
     setIsModalOpen(true);
   };
 
-  // Open modal for creating
-  const handleOpenAdd = () => {
-    setSelectedUser(null);
-    setIsModalOpen(true);
-  };
-
-  // Auto-hide toast after 4s
+  // Hide toast automatically after 4s
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 4000);
@@ -334,10 +248,9 @@ export function useUser() {
     formLoading,
     
     // Actions
-    handleSaveUser,
-    handleToggleStatus,
+    handleUpdateUser,
     handleEdit,
-    handleOpenAdd,
+    handleToggleStatus,
     
     // State
     loading,
@@ -346,5 +259,6 @@ export function useUser() {
     
     // User role info (for UI decisions)
     userRole: user?.role,
+    canEditUsers: user?.role === UserRole.ADMIN || user?.role === UserRole.COORDINATOR,
   };
 }

@@ -85,7 +85,7 @@ export function useGroup() {
           getGroupsByUniversity(user.idUniversity),
           getProgramsByUniversity(user.idUniversity),
           getDivisionsByUniversity(user.idUniversity),
-          getUsersByUniversity(user.idUniversity)
+          getUsersByUniversity(user.idUniversity, true)
         ]);
 
         // Mapear programas con información de división

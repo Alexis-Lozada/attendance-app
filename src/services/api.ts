@@ -77,7 +77,7 @@ apis.forEach((api) => {
         if (refreshToken) {
           originalRequest._retry = true;
           try {
-            const { data } = await usersApi.post("/users/refresh-token", { refreshToken });
+            const { data } = await usersApi.post("/auth/refresh-token", { refreshToken });
             setTokens(data.accessToken, data.refreshToken);
             originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
             return api(originalRequest);
