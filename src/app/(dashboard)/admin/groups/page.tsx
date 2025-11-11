@@ -8,10 +8,11 @@ import {
   Hash,
   SlidersHorizontal, 
   MoreVertical, 
-  Edit2,
+  Edit3,
   UserCheck,
   BookOpen,
-  User
+  User,
+  UserPlus
 } from "lucide-react";
 
 import Table, { TableColumn } from "@/components/ui/Table";
@@ -68,6 +69,17 @@ export default function GroupsPage() {
 
   if (loading) return <Spinner text="Cargando grupos académicos..." fullScreen />;
 
+  // Handle register students (placeholder for now)
+  const handleRegisterStudents = (group: GroupWithDetails) => {
+    // TODO: Implement student registration functionality
+    console.log("Registrar estudiantes para el grupo:", group.groupCode);
+    setToast({
+      title: "Funcionalidad en desarrollo",
+      description: "La funcionalidad de registro de estudiantes estará disponible próximamente.",
+      type: "success",
+    });
+  };
+
   // Table columns configuration
   const columns: TableColumn<GroupWithDetails>[] = [
     { 
@@ -106,7 +118,7 @@ export default function GroupsPage() {
       label: "Tutor",
       icon: <User size={16} />,
       render: (item) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-[180px]">
           {item.tutorImage ? (
             <img
               src={item.tutorImage}
@@ -118,8 +130,8 @@ export default function GroupsPage() {
               <User className="w-4 h-4 text-gray-500" />
             </div>
           )}
-          <div>
-            <p className="text-sm font-medium text-gray-900">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
               {item.tutorName || "Sin asignar"}
             </p>
             {item.tutorName && item.tutorName !== "Sin asignar" && (
@@ -168,15 +180,21 @@ export default function GroupsPage() {
       key: "actions",
       label: "Acciones",
       icon: <MoreVertical size={16} />,
-      align: "center",
       render: (item) => (
         <div className="flex justify-center gap-2">
           <button
-            title="Editar"
             onClick={() => handleEdit(item)}
-            className="text-gray-600 hover:text-primary transition"
+            className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition cursor-pointer"
           >
-            <Edit2 size={15} />
+            <Edit3 className="w-4 h-4" />
+            Editar
+          </button>
+          <button
+            onClick={() => handleRegisterStudents(item)}
+            className="flex items-center gap-2 text-sm text-white bg-primary rounded-md px-3 py-1.5 hover:bg-primary/90 transition cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            Estudiantes
           </button>
         </div>
       ),
