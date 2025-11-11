@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, Mail, IdCard, Eye, EyeOff } from "lucide-react";
+import { User, Mail, IdCard } from "lucide-react";
 import { RoleLabels, UserRole } from "@/types/roles";
 import type { User as UserType } from "@/types/user";
 
@@ -28,7 +28,6 @@ export default function UserForm({
     lastName: "",
     email: "",
     enrollmentNumber: "",
-    status: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,7 +40,6 @@ export default function UserForm({
         lastName: initialData.lastName,
         email: initialData.email,
         enrollmentNumber: initialData.enrollmentNumber,
-        status: initialData.status,
       });
     } else {
       // Reset form for new user (though this component is mainly for editing)
@@ -50,13 +48,12 @@ export default function UserForm({
         lastName: "",
         email: "",
         enrollmentNumber: "",
-        status: true,
       });
     }
     setErrors({});
   }, [initialData]);
 
-  const handleChange = (field: keyof UserType, value: string | boolean) => {
+  const handleChange = (field: keyof UserType, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
@@ -102,37 +99,6 @@ export default function UserForm({
 
   return (
     <div className="space-y-4">
-      {/* User Info Display (Read-only) */}
-      {initialData && (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center gap-3 mb-3">
-            {initialData.profileImageUrl ? (
-              <img
-                src={initialData.profileImageUrl}
-                alt={initialData.fullName}
-                className="w-12 h-12 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">
-                <User className="w-6 h-6 text-gray-500" />
-              </div>
-            )}
-            <div>
-              <p className="font-medium text-gray-900">{initialData.fullName}</p>
-              <p className="text-sm text-gray-600">
-                {RoleLabels[initialData.role as UserRole] || initialData.role}
-              </p>
-            </div>
-          </div>
-          
-          {initialData.enrollmentNumber && (
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">Matrícula actual:</span> {initialData.enrollmentNumber}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Form Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* First Name */}
@@ -222,51 +188,6 @@ export default function UserForm({
         <p className="text-xs text-gray-500 mt-1">
           Opcional. Número de matrícula para estudiantes o número de empleado para personal.
         </p>
-      </div>
-
-      {/* Status Toggle */}
-      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="flex items-center gap-2">
-          {formData.status ? (
-            <Eye className="w-4 h-4 text-green-600" />
-          ) : (
-            <EyeOff className="w-4 h-4 text-red-600" />
-          )}
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-900">
-            Estado del usuario
-          </p>
-          <p className="text-xs text-gray-500">
-            {formData.status 
-              ? "El usuario puede acceder al sistema"
-              : "El usuario no puede acceder al sistema"
-            }
-          </p>
-        </div>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.status || false}
-            onChange={(e) => handleChange("status", e.target.checked)}
-            className="sr-only peer"
-          />
-          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-        </label>
-      </div>
-
-      {/* Non-editable Fields Notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-start gap-2">
-          <div className="w-4 h-4 rounded-full bg-blue-500 mt-0.5 flex-shrink-0"></div>
-          <div>
-            <p className="text-sm font-medium text-blue-900">Información adicional</p>
-            <p className="text-xs text-blue-700 mt-1">
-              El rol y la contraseña del usuario no pueden ser modificados desde esta pantalla. 
-              El usuario puede cambiar su contraseña desde su perfil.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Action Buttons */}
