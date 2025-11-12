@@ -1,32 +1,16 @@
 import { academicApi } from "@/services/api";
+import type { Course } from "@/types/course";
 
 // =====================================================================
 // COURSE
 // =====================================================================
-
-export interface CourseResponse {
-  idCourse: number;
-  idUniversity: number;
-  idDivision?: number | null;
-  divisionCode?: string | null;
-  divisionName?: string | null;
-  courseCode: string;
-  courseName: string;
-  semester?: string | null; // puede ser null = curso general
-  status: boolean;
-
-  // === Datos enriquecidos ===
-  modulesCount?: number; // cantidad de módulos
-  groupsCount?: number;  // cantidad de grupos asociados (de attendance-ms)
-  groupIds?: number[];   // IDs de los grupos asociados
-}
 
 // === Obtener cursos por universidad (opcionalmente solo activos o por semestre) ===
 export async function getCoursesByUniversity(
   idUniversity: number,
   active?: boolean,
   semester?: string
-): Promise<CourseResponse[]> {
+): Promise<Course[]> {
   const params: Record<string, any> = {};
   if (active !== undefined) params.active = active;
   if (semester) params.semester = semester;
@@ -40,7 +24,7 @@ export async function getCoursesByDivision(
   idDivision: number,
   active?: boolean,
   semester?: string
-): Promise<CourseResponse[]> {
+): Promise<Course[]> {
   const params: Record<string, any> = {};
   if (active !== undefined) params.active = active;
   if (semester) params.semester = semester;
@@ -57,7 +41,7 @@ export async function createCourse(payload: {
   courseName: string;
   semester?: string | null;
   status: boolean;
-}): Promise<CourseResponse> {
+}): Promise<Course> {
   const { data } = await academicApi.post("/courses", payload);
   return data;
 }
@@ -74,13 +58,13 @@ export async function updateCourse(
     semester?: string | null;
     status: boolean;
   }
-): Promise<CourseResponse> {
+): Promise<Course> {
   const { data } = await academicApi.put(`/courses/${idCourse}`, payload);
   return data;
 }
 
 // === Cambiar estatus del curso (activar/desactivar) ===
-export async function updateCourseStatus(idCourse: number, status: boolean): Promise<CourseResponse> {
+export async function updateCourseStatus(idCourse: number, status: boolean): Promise<Course> {
   const { data } = await academicApi.put(`/courses/${idCourse}/status`, null, {
     params: { status },
   });
@@ -91,7 +75,7 @@ export async function updateCourseStatus(idCourse: number, status: boolean): Pro
 // COURSE MODULES
 // =====================================================================
 
-export interface CourseModuleResponse {
+export interface CourseModule {
   idModule: number;
   idCourse: number;
   moduleNumber: number;
@@ -101,13 +85,13 @@ export interface CourseModuleResponse {
 }
 
 // === Obtener módulos por curso ===
-export async function getModulesByCourse(idCourse: number): Promise<CourseModuleResponse[]> {
+export async function getModulesByCourse(idCourse: number): Promise<CourseModule[]> {
   const { data } = await academicApi.get(`/course-modules/course/${idCourse}`);
   return data;
 }
 
 // === Obtener módulo por ID ===
-export async function getModuleById(idModule: number): Promise<CourseModuleResponse> {
+export async function getModuleById(idModule: number): Promise<CourseModule> {
   const { data } = await academicApi.get(`/course-modules/${idModule}`);
   return data;
 }
@@ -119,7 +103,7 @@ export async function createModule(payload: {
   title: string;
   startDate?: string | null;
   endDate?: string | null;
-}): Promise<CourseModuleResponse> {
+}): Promise<CourseModule> {
   const { data } = await academicApi.post("/course-modules", payload);
   return data;
 }
@@ -134,7 +118,7 @@ export async function updateModule(
     startDate?: string | null;
     endDate?: string | null;
   }
-): Promise<CourseModuleResponse> {
+): Promise<CourseModule> {
   const { data } = await academicApi.put(`/course-modules/${idModule}`, payload);
   return data;
 }
