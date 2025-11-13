@@ -1,24 +1,18 @@
 import { academicApi } from "@/services/api";
 
-// =====================================================================
-// COURSE
-// =====================================================================
-
 export interface CourseResponse {
   idCourse: number;
   idUniversity: number;
-  idDivision?: number | null;
+  idDivision?: number | null; // puede ser null = curso general
   divisionCode?: string | null;
   divisionName?: string | null;
   courseCode: string;
   courseName: string;
   semester?: string | null; // puede ser null = curso general
   status: boolean;
-
-  // === Datos enriquecidos ===
-  modulesCount?: number; // cantidad de módulos
+  modulesCount?: number;
   groupsCount?: number;  // cantidad de grupos asociados (de attendance-ms)
-  groupIds?: number[];   // IDs de los grupos asociados
+  groupIds?: number[];
 }
 
 // === Obtener cursos por universidad (opcionalmente solo activos o por semestre) ===
@@ -86,10 +80,6 @@ export async function updateCourseStatus(idCourse: number, status: boolean): Pro
   });
   return data;
 }
-
-// =====================================================================
-// COURSE MODULES
-// =====================================================================
 
 export interface CourseModuleResponse {
   idModule: number;
