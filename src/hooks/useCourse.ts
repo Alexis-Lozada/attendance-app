@@ -8,10 +8,13 @@ import {
   updateCourse,
   updateCourseStatus,
   getModulesByCourse,
+  createModule,
+  updateModule,
+  deleteModule,
 } from "@/services/course.service";
 import { getDivisionsByUniversity } from "@/services/division.service";
 import { UserRole } from "@/types/roles";
-import type { CourseWithDetails, CourseFormData } from "@/types/course";
+import type { CourseWithDetails, CourseFormData, CourseModule, CourseModuleFormData } from "@/types/course";
 import type { Division } from "@/types/division";
 
 /**
@@ -22,6 +25,7 @@ import type { Division } from "@/types/division";
  * - Cambio de estado
  * - Manejo de modal y notificaciones
  * - Carga de información de divisiones y módulos
+ * - Gestión completa de módulos (CRUD)
  */
 export function useCourse() {
   const { user } = useAuth();
@@ -40,6 +44,12 @@ export function useCourse() {
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<CourseWithDetails | null>(null);
+  
+  // Estados para módulos
+  const [isModulesModalOpen, setIsModulesModalOpen] = useState(false);
+  const [selectedCourseForModules, setSelectedCourseForModules] = useState<CourseWithDetails | null>(null);
+  const [modules, setModules] = useState<CourseModule[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
 
   const coursesPerPage = 5;
 
@@ -262,6 +272,110 @@ export function useCourse() {
     }
   };
 
+  // ========== GESTIÓN DE MÓDULOS ==========
+
+  // Abrir modal de módulos
+  const handleOpenModules = async (course: CourseWithDetails) => {
+    setSelectedCourseForModules(course);
+    setIsModulesModalOpen(true);
+    await loadModules(course.idCourse);
+  };
+
+  // Cargar módulos de un curso
+  const loadModules = async (idCourse: number) => {
+    try {
+      setModulesLoading(true);
+      const modulesData = await getModulesByCourse(idCourse);
+      setModules(modulesData);
+    } catch (err: any) {
+      console.error("Error loading modules:", err);
+      setToast({
+        title: "Error al cargar módulos",
+        description: err?.message || "No se pudieron cargar los módulos del curso.",
+        type: "error",
+      });
+    } finally {
+      setModulesLoading(false);
+    }
+  };
+
+  // Guardar módulo (crear o actualizar)
+  const handleSaveModule = async (data: CourseModuleFormData, idModule?: number) => {
+    try {
+      if (idModule) {
+        // Actualizar módulo existente
+        const updated = await updateModule(idModule, data);
+        setModules(prev => prev.map(m => m.idModule === idModule ? updated : m));
+        setToast({
+          title: "Módulo actualizado",
+          description: "El módulo se actualizó correctamente.",
+          type: "success",
+        });
+      } else {
+        // Crear nuevo módulo
+        const newModule = await createModule(data);
+        setModules(prev => [...prev, newModule]);
+        setToast({
+          title: "Módulo creado",
+          description: "El nuevo módulo se agregó exitosamente.",
+          type: "success",
+        });
+      }
+
+      // Actualizar el conteo de módulos en el curso
+      setCourses(prev =>
+        prev.map(c =>
+          c.idCourse === data.idCourse
+            ? { ...c, modulesCount: idModule ? c.modulesCount : (c.modulesCount || 0) + 1 }
+            : c
+        )
+      );
+    } catch (err: any) {
+      console.error("Error saving module:", err);
+      setToast({
+        title: idModule ? "Error al actualizar módulo" : "Error al crear módulo",
+        description: err?.message || "No se pudo completar la operación.",
+        type: "error",
+      });
+      throw err; // Re-throw para que el componente pueda manejarlo
+    }
+  };
+
+  // Eliminar módulo
+  const handleDeleteModule = async (idModule: number) => {
+    try {
+      await deleteModule(idModule);
+      
+      const deletedModule = modules.find(m => m.idModule === idModule);
+      setModules(prev => prev.filter(m => m.idModule !== idModule));
+      
+      setToast({
+        title: "Módulo eliminado",
+        description: "El módulo fue eliminado exitosamente.",
+        type: "success",
+      });
+
+      // Actualizar el conteo de módulos en el curso
+      if (deletedModule) {
+        setCourses(prev =>
+          prev.map(c =>
+            c.idCourse === deletedModule.idCourse
+              ? { ...c, modulesCount: Math.max(0, (c.modulesCount || 0) - 1) }
+              : c
+          )
+        );
+      }
+    } catch (err: any) {
+      console.error("Error deleting module:", err);
+      setToast({
+        title: "Error al eliminar módulo",
+        description: err?.message || "No se pudo eliminar el módulo.",
+        type: "error",
+      });
+      throw err; // Re-throw para que el componente pueda manejarlo
+    }
+  };
+
   // Cambiar filtro de división
   const handleDivisionChange = (divisionId: number | "all") => {
     setSelectedDivision(divisionId);
@@ -326,6 +440,16 @@ export function useCourse() {
     handleToggleStatus,
     handleEdit,
     handleOpenAdd,
+    
+    // Modules Management
+    isModulesModalOpen,
+    setIsModulesModalOpen,
+    selectedCourseForModules,
+    modules,
+    modulesLoading,
+    handleOpenModules,
+    handleSaveModule,
+    handleDeleteModule,
     
     // State
     loading,

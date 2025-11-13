@@ -11,7 +11,11 @@ import {
   MoreVertical, 
   Edit2,
   Search,
-  List
+  List,
+  FolderOpen,
+  GraduationCap,
+  Calendar,
+  Users
 } from "lucide-react";
 
 import Table, { TableColumn } from "@/components/ui/Table";
@@ -20,6 +24,7 @@ import Toast from "@/components/ui/Toast";
 import Switch from "@/components/ui/Switch";
 import Spinner from "@/components/ui/Spinner";
 import CourseForm from "@/components/courses/CourseForm";
+import ModulesModal from "@/components/courses/ModulesModal";
 import { useCourse } from "@/hooks/useCourse";
 import { UserRole } from "@/types/roles";
 import type { CourseWithDetails } from "@/types/course";
@@ -58,6 +63,16 @@ export default function CoursesPage() {
     handleEdit,
     handleOpenAdd,
     
+    // Modules Management
+    isModulesModalOpen,
+    setIsModulesModalOpen,
+    selectedCourseForModules,
+    modules,
+    modulesLoading,
+    handleOpenModules,
+    handleSaveModule,
+    handleDeleteModule,
+    
     // State
     loading,
     toast,
@@ -76,7 +91,7 @@ export default function CoursesPage() {
     { 
       key: "courseCode", 
       label: "Código", 
-      icon: <Hash size={16} />,
+      icon: <GraduationCap size={16} />,
       render: (item) => (
         <div className="min-w-[80px]">
           <span className="font-medium text-gray-900">{item.courseCode}</span>
@@ -100,21 +115,10 @@ export default function CoursesPage() {
       label: "División",
       icon: <Building2 size={16} />,
       render: (item) => (
-        <div className="min-w-[150px]">
+        <div className="min-w-[200px]">
           <p className="text-sm font-medium text-gray-900">{item.divisionCode || 'N/A'}</p>
           <p className="text-xs text-gray-500 mt-0.5">{item.divisionName || 'Curso general'}</p>
         </div>
-      )
-    },
-    {
-      key: "semester",
-      label: "Semestre",
-      icon: <Hash size={16} />,
-      align: "center",
-      render: (item) => (
-        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-md">
-          {item.semester ? `${item.semester}°` : 'General'}
-        </span>
       )
     },
     {
@@ -123,13 +127,25 @@ export default function CoursesPage() {
       icon: <Layers size={16} />,
       align: "center",
       render: (item) => (
-        <div className="text-center min-w-[100px]">
+        <div className="text-center min-w-[120px]">
           <p className="text-sm font-medium text-gray-900">
             {item.modulesCount || 0} módulos
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 mb-2">
             {item.groupsCount || 0} grupos
           </p>
+          {(item.groupsCount || 0) < 0 && (
+            <button
+              onClick={() => {
+                // TODO: Implementar vista de grupos
+                console.log('Ver grupos del curso:', item.idCourse);
+              }}
+              className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-1 hover:bg-primary hover:text-white transition"
+            >
+              <Users className="w-3 h-3" />
+              Ver grupos
+            </button>
+          )}
         </div>
       )
     },
@@ -149,15 +165,21 @@ export default function CoursesPage() {
       key: "actions",
       label: "Acciones",
       icon: <MoreVertical size={16} />,
-      align: "center",
       render: (item) => (
-        <div className="flex justify-center gap-3">
+        <div className="flex gap-2">
           <button 
             onClick={() => handleEdit(item)}
             className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition cursor-pointer"
           >
             <Edit2 className="w-4 h-4" />
             Editar
+          </button>
+          <button 
+            onClick={() => handleOpenModules(item)}
+            className="flex items-center gap-2 text-sm text-primary border border-primary rounded-md px-3 py-1.5 hover:bg-primary hover:text-white transition cursor-pointer"
+          >
+            <FolderOpen className="w-4 h-4" />
+            Módulos
           </button>
         </div>
       ),
@@ -242,7 +264,7 @@ export default function CoursesPage() {
           {uniqueSemesters.length > 0 && (
             <>
               <div className="flex items-center gap-2 lg:ml-6">
-                <Hash className="w-4 h-4 text-gray-600" />
+                <Calendar className="w-4 h-4 text-gray-600" />
                 <span className="text-sm font-medium text-gray-700">Semestre:</span>
               </div>
               
@@ -351,7 +373,7 @@ export default function CoursesPage() {
         emptyMessage="No se encontraron cursos académicos."
       />
 
-      {/* Modal for create/edit */}
+      {/* Modal for create/edit course */}
       <Modal
         title={selectedCourse ? "Editar curso académico" : "Agregar nuevo curso"}
         isOpen={isModalOpen}
@@ -365,6 +387,21 @@ export default function CoursesPage() {
           loading={formLoading}
         />
       </Modal>
+
+      {/* Modal for modules management */}
+      {selectedCourseForModules && (
+        <ModulesModal
+          isOpen={isModulesModalOpen}
+          onClose={() => setIsModulesModalOpen(false)}
+          courseName={selectedCourseForModules.courseName}
+          courseCode={selectedCourseForModules.courseCode}
+          idCourse={selectedCourseForModules.idCourse}
+          modules={modules}
+          loading={modulesLoading}
+          onSaveModule={handleSaveModule}
+          onDeleteModule={handleDeleteModule}
+        />
+      )}
     </>
   );
 }
