@@ -8,16 +8,9 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  size?: "small" | "medium" | "large" | "xlarge";
 }
 
-export default function Modal({ 
-  title, 
-  isOpen, 
-  onClose, 
-  children,
-  size = "medium" 
-}: ModalProps) {
+export default function Modal({ title, isOpen, onClose, children }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   if (!isOpen) return null;
@@ -28,26 +21,18 @@ export default function Modal({
     }
   };
 
-  // Configuración de tamaños
-  const sizeClasses = {
-    small: "max-w-md",
-    medium: "max-w-lg",
-    large: "max-w-2xl",
-    xlarge: "max-w-4xl"
-  };
-
   return (
     <div
       ref={modalRef}
       onClick={handleBackgroundClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
     >
       <div
-        className={`bg-white w-full ${sizeClasses[size]} rounded-xl border border-gray-200 p-6 relative animate-fadeIn max-h-[90vh] flex flex-col`}
+        className="bg-white w-full max-w-lg rounded-xl border border-gray-200 p-6 relative animate-fadeIn"
         onClick={(e) => e.stopPropagation()} // evita cerrar al hacer clic dentro
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
@@ -57,10 +42,8 @@ export default function Modal({
           </button>
         </div>
 
-        {/* Content - con scroll si es necesario */}
-        <div className="overflow-y-auto flex-1">
-          {children}
-        </div>
+        {/* Content */}
+        <div>{children}</div>
       </div>
     </div>
   );

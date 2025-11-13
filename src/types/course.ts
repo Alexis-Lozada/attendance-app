@@ -38,6 +38,6 @@ export interface CourseModuleFormData {
   idCourse: number;
   moduleNumber: number;
   title: string;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate: string;
+  endDate: string;
 }

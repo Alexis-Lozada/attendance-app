@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar } from "lucide-react";
 import type { CourseModule, CourseModuleFormData } from "@/types/course";
 
 interface Props {
@@ -25,8 +24,8 @@ export default function ModuleForm({
     idCourse,
     moduleNumber: 1,
     title: "",
-    startDate: null,
-    endDate: null,
+    startDate: "",
+    endDate: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -38,8 +37,8 @@ export default function ModuleForm({
         idCourse: initialData.idCourse,
         moduleNumber: initialData.moduleNumber,
         title: initialData.title,
-        startDate: initialData.startDate || null,
-        endDate: initialData.endDate || null,
+        startDate: initialData.startDate || "",
+        endDate: initialData.endDate || "",
       });
     } else {
       // Auto-suggest next module number
@@ -51,8 +50,8 @@ export default function ModuleForm({
         idCourse,
         moduleNumber: maxModuleNumber + 1,
         title: "",
-        startDate: null,
-        endDate: null,
+        startDate: "",
+        endDate: "",
       });
     }
     setErrors({});
@@ -88,7 +87,16 @@ export default function ModuleForm({
       newErrors.title = "El título no puede exceder 200 caracteres";
     }
 
-    // Validate dates if both are provided
+    // Validate dates - now required
+    if (!formData.startDate) {
+      newErrors.startDate = "La fecha de inicio es requerida";
+    }
+
+    if (!formData.endDate) {
+      newErrors.endDate = "La fecha de fin es requerida";
+    }
+
+    // Validate date range if both are provided
     if (formData.startDate && formData.endDate) {
       const start = new Date(formData.startDate);
       const end = new Date(formData.endDate);
@@ -160,19 +168,16 @@ export default function ModuleForm({
         {/* Start Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Fecha de Inicio
+            Fecha de Inicio *
           </label>
-          <div className="relative">
-            <input
-              type="date"
-              value={formData.startDate || ""}
-              onChange={(e) => handleChange("startDate", e.target.value || null)}
-              className={`w-full border rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-primary focus:outline-none ${
-                errors.startDate ? "border-red-300" : "border-gray-300"
-              }`}
-            />
-            <Calendar className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
+          <input
+            type="date"
+            value={formData.startDate || ""}
+            onChange={(e) => handleChange("startDate", e.target.value || "")}
+            className={`w-full border rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-primary focus:outline-none ${
+              errors.startDate ? "border-red-300" : "border-gray-300"
+            }`}
+          />
           {errors.startDate && (
             <p className="text-xs text-red-600 mt-1">{errors.startDate}</p>
           )}
@@ -181,20 +186,17 @@ export default function ModuleForm({
         {/* End Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Fecha de Fin
+            Fecha de Fin *
           </label>
-          <div className="relative">
-            <input
-              type="date"
-              value={formData.endDate || ""}
-              onChange={(e) => handleChange("endDate", e.target.value || null)}
-              min={formData.startDate || today}
-              className={`w-full border rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-primary focus:outline-none ${
-                errors.endDate ? "border-red-300" : "border-gray-300"
-              }`}
-            />
-            <Calendar className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
+          <input
+            type="date"
+            value={formData.endDate || ""}
+            onChange={(e) => handleChange("endDate", e.target.value || "")}
+            min={formData.startDate || today}
+            className={`w-full border rounded-md px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-primary focus:outline-none ${
+              errors.endDate ? "border-red-300" : "border-gray-300"
+            }`}
+          />
           {errors.endDate && (
             <p className="text-xs text-red-600 mt-1">{errors.endDate}</p>
           )}
@@ -202,7 +204,7 @@ export default function ModuleForm({
       </div>
 
       <p className="text-xs text-gray-500">
-        Las fechas son opcionales y ayudan a organizar el calendario académico
+        Las fechas definen el período de duración del módulo
       </p>
 
       {/* Action Buttons */}

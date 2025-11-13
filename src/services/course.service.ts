@@ -107,8 +107,8 @@ export async function createModule(payload: {
   idCourse: number;
   moduleNumber: number;
   title: string;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate: string;
+  endDate: string;
 }): Promise<CourseModuleResponse> {
   const { data } = await academicApi.post("/course-modules", payload);
   return data;
@@ -121,8 +121,8 @@ export async function updateModule(
     idCourse: number;
     moduleNumber: number;
     title: string;
-    startDate?: string | null;
-    endDate?: string | null;
+    startDate: string;
+    endDate: string;
   }
 ): Promise<CourseModuleResponse> {
   const { data } = await academicApi.put(`/course-modules/${idModule}`, payload);
