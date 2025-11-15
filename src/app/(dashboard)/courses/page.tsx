@@ -2,17 +2,20 @@
 
 import { 
   Plus, 
-  Users, 
-  GraduationCap, 
-  Calendar, 
+  BookOpen, 
+  CheckCircle2,
+  Layers,
+  Building2,
   Hash,
   SlidersHorizontal, 
   MoreVertical, 
-  Edit3,
-  UserCheck,
-  BookOpen,
-  User,
-  UserPlus
+  Edit2,
+  Search,
+  List,
+  FolderOpen,
+  GraduationCap,
+  Calendar,
+  Users
 } from "lucide-react";
 
 import Table, { TableColumn } from "@/components/ui/Table";
@@ -20,19 +23,19 @@ import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
 import Switch from "@/components/ui/Switch";
 import Spinner from "@/components/ui/Spinner";
-import GroupForm from "@/components/groups/GroupForm";
-import { useGroup } from "@/hooks/useGroup";
-import { UserRole, RoleLabels } from "@/types/roles";
-import type { GroupWithDetails } from "@/types/group";
+import CourseForm from "@/components/courses/CourseForm";
+import ModulesModal from "@/components/courses/ModulesModal";
+import { useCourse } from "@/hooks/useCourse";
+import { UserRole } from "@/types/roles";
+import type { CourseWithDetails } from "@/types/course";
 
-export default function GroupsPage() {
+export default function CoursesPage() {
   const {
     // Data
-    groups,
-    programs,
-    tutors,
-    filteredGroups,
-    totalGroups,
+    courses,
+    divisions,
+    filteredCourses,
+    totalCourses,
     uniqueSemesters,
     
     // Pagination
@@ -42,126 +45,108 @@ export default function GroupsPage() {
     
     // Filters
     searchTerm,
-    selectedProgram,
+    selectedDivision,
     selectedSemester,
     setSearchTerm,
-    handleProgramChange,
+    handleDivisionChange,
     handleSemesterChange,
     
     // Modal & Form
     isModalOpen,
     setIsModalOpen,
-    selectedGroup,
+    selectedCourse,
     formLoading,
     
     // Actions
-    handleSaveGroup,
+    handleSaveCourse,
     handleToggleStatus,
     handleEdit,
     handleOpenAdd,
+    
+    // Modules Management
+    isModulesModalOpen,
+    setIsModulesModalOpen,
+    selectedCourseForModules,
+    modules,
+    modulesLoading,
+    handleOpenModules,
+    handleSaveModule,
+    handleDeleteModule,
     
     // State
     loading,
     toast,
     setToast,
     userRole,
-  } = useGroup();
+  } = useCourse();
 
-  if (loading) return <Spinner text="Cargando grupos académicos..." fullScreen />;
+  if (loading) return <Spinner text="Cargando cursos académicos..." fullScreen />;
 
-  // Handle register students (placeholder for now)
-  const handleRegisterStudents = (group: GroupWithDetails) => {
-    // TODO: Implement student registration functionality
-    console.log("Registrar estudiantes para el grupo:", group.groupCode);
-    setToast({
-      title: "Funcionalidad en desarrollo",
-      description: "La funcionalidad de registro de estudiantes estará disponible próximamente.",
-      type: "success",
-    });
-  };
+  // Calculate stats
+  const activeCourses = filteredCourses.filter(c => c.status).length;
+  const totalModules = filteredCourses.reduce((sum, course) => sum + (course.modulesCount || 0), 0);
 
   // Table columns configuration
-  const columns: TableColumn<GroupWithDetails>[] = [
+  const columns: TableColumn<CourseWithDetails>[] = [
     { 
-      key: "groupCode", 
-      label: "Grupo", 
-      icon: <Hash size={16} />,
-      render: (item) => (
-        <div className="min-w-[100px]">
-          <p className="font-medium text-gray-900">{item.groupCode}</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {item.programCode} • {item.semester}°
-          </p>
-        </div>
-      )
-    },
-    {
-      key: "program",
-      label: "Programa Educativo",
+      key: "courseCode", 
+      label: "Código", 
       icon: <GraduationCap size={16} />,
       render: (item) => (
-        <div className="max-w-[200px]">
-          <p className="text-sm text-gray-900 font-medium">{item.programCode}</p>
-          <p className="text-xs text-gray-500 truncate" title={item.programName}>
-            {item.programName}
-          </p>
-          {item.divisionName && (
-            <p className="text-xs text-gray-400 truncate mt-0.5" title={`División: ${item.divisionName}`}>
-              División: {item.divisionName}
-            </p>
-          )}
+        <div className="min-w-[80px]">
+          <span className="font-medium text-gray-900">{item.courseCode}</span>
+          <p className="text-xs text-gray-500 mt-0.5">{item.semester ? `${item.semester}° semestre` : 'General'}</p>
         </div>
       )
     },
-    {
-      key: "tutor",
-      label: "Tutor",
-      icon: <User size={16} />,
-      render: (item) => (
-        <div className="flex items-center gap-3 min-w-[180px]">
-          {item.tutorImage ? (
-            <img
-              src={item.tutorImage}
-              alt={item.tutorName || "Tutor"}
-              className="w-8 h-8 aspect-square rounded-md object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-8 h-8 aspect-square rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-gray-500" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {item.tutorName || "Sin asignar"}
-            </p>
-            {item.tutorName && item.tutorName !== "Sin asignar" && (
-              <p className="text-xs text-gray-500">Tutor</p>
-            )}
-          </div>
-        </div>
-      )
-    },
-    {
-      key: "enrollment",
-      label: "Estudiantes",
+    { 
+      key: "courseName", 
+      label: "Nombre del Curso", 
       icon: <BookOpen size={16} />,
-      align: "center",
       render: (item) => (
-        <div className="text-center">
-          <span className="text-sm font-medium text-gray-900">
-            {item.enrollmentCount || 0}
-          </span>
-          <p className="text-xs text-gray-500">inscritos</p>
+        <div className="min-w-[200px]">
+          <p className="font-medium text-gray-900">{item.courseName}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{item.divisionCode || 'General'}</p>
         </div>
       )
     },
     {
-      key: "academicYear",
-      label: "Período",
-      icon: <Calendar size={16} />,
+      key: "division",
+      label: "División",
+      icon: <Building2 size={16} />,
+      render: (item) => (
+        <div className="min-w-[200px]">
+          <p className="text-sm font-medium text-gray-900">{item.divisionCode || 'N/A'}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{item.divisionName || 'Curso general'}</p>
+        </div>
+      )
+    },
+    {
+      key: "stats",
+      label: "Estadísticas",
+      icon: <Layers size={16} />,
       align: "center",
       render: (item) => (
-        <span className="text-sm text-gray-700">{item.academicYear}</span>
+        <div className="text-center min-w-[120px]">
+          <p className="text-sm font-medium text-gray-900">
+            {item.modulesCount || 0} módulos
+          </p>
+          <p className="text-xs text-gray-500 mb-2">
+            {item.groupsCount || 0} grupos
+          </p>
+          {(item.groupsCount || 0) < 0 && (
+            <button
+              onClick={() => {
+                // TODO: Implementar vista de grupos
+                console.log('Ver grupos del curso:', item.idCourse);
+              }}
+              className="inline-flex items-center gap-1 text-xs text-primary border border-primary rounded px-2 py-1 hover:bg-primary hover:text-white transition"
+            >
+              <Users className="w-3 h-3" />
+              Ver grupos
+            </button>
+          )}
+        </div>
       )
     },
     {
@@ -172,7 +157,7 @@ export default function GroupsPage() {
       render: (item) => (
         <Switch
           checked={item.status}
-          onChange={() => handleToggleStatus(item.idGroup, item.status)}
+          onChange={() => handleToggleStatus(item.idCourse, item.status)}
         />
       ),
     },
@@ -181,20 +166,20 @@ export default function GroupsPage() {
       label: "Acciones",
       icon: <MoreVertical size={16} />,
       render: (item) => (
-        <div className="flex justify-center gap-2">
-          <button
+        <div className="flex gap-2">
+          <button 
             onClick={() => handleEdit(item)}
             className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition cursor-pointer"
           >
-            <Edit3 className="w-4 h-4" />
+            <Edit2 className="w-4 h-4" />
             Editar
           </button>
-          <button
-            onClick={() => handleRegisterStudents(item)}
-            className="flex items-center gap-2 text-sm text-white bg-primary rounded-md px-3 py-1.5 hover:bg-primary/90 transition cursor-pointer"
+          <button 
+            onClick={() => handleOpenModules(item)}
+            className="flex items-center gap-2 text-sm text-primary border border-primary rounded-md px-3 py-1.5 hover:bg-primary hover:text-white transition cursor-pointer"
           >
-            <UserPlus className="w-4 h-4" />
-            Estudiantes
+            <FolderOpen className="w-4 h-4" />
+            Módulos
           </button>
         </div>
       ),
@@ -217,13 +202,13 @@ export default function GroupsPage() {
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-[15px] font-semibold text-gray-900">
-            Administración de Grupos Académicos
+            Administración de Cursos Académicos
           </h3>
           <p className="text-[13px] text-gray-500">
-            Gestiona los grupos de estudiantes organizados por programa educativo y semestre.
+            Gestiona los cursos y materias que componen los programas educativos de la institución.
             {userRole === UserRole.COORDINATOR && (
               <span className="block mt-1 text-blue-600">
-                Mostrando solo grupos de los programas de tu división.
+                Mostrando solo cursos de tu división.
               </span>
             )}
           </p>
@@ -234,43 +219,43 @@ export default function GroupsPage() {
           className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-lg flex items-center justify-center gap-2 hover:brightness-95 text-sm font-medium transition"
         >
           <Plus size={18} />
-          Nuevo grupo
+          Nuevo curso
         </button>
       </header>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          {/* Program filter */}
+          {/* Division filter */}
           <div className="flex items-center gap-2">
-            <GraduationCap className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Programa:</span>
+            <Building2 className="w-4 h-4 text-gray-600" />
+            <span className="text-sm font-medium text-gray-700">División:</span>
           </div>
           
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => handleProgramChange("all")}
+              onClick={() => handleDivisionChange("all")}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                selectedProgram === "all"
+                selectedDivision === "all"
                   ? "bg-primary text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Todos los programas
+              Todas las divisiones
             </button>
             
-            {programs.map((program) => (
+            {divisions.map((division) => (
               <button
-                key={program.idProgram}
-                onClick={() => handleProgramChange(program.idProgram)}
+                key={division.idDivision}
+                onClick={() => handleDivisionChange(division.idDivision)}
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                  selectedProgram === program.idProgram
+                  selectedDivision === division.idDivision
                     ? "bg-primary text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
-                title={program.programName}
+                title={division.name}
               >
-                {program.programCode}
+                {division.code}
               </button>
             ))}
           </div>
@@ -314,16 +299,16 @@ export default function GroupsPage() {
         </div>
 
         {/* Active filters info */}
-        {(selectedProgram !== "all" || selectedSemester !== "all") && (
+        {(selectedDivision !== "all" || selectedSemester !== "all") && (
           <div className="mt-3 pt-3 border-t border-gray-100">
             <div className="text-sm text-gray-500">
-              Mostrando grupos de: {" "}
-              {selectedProgram !== "all" && (
+              Mostrando cursos de: {" "}
+              {selectedDivision !== "all" && (
                 <span className="font-medium text-gray-700">
-                  {programs.find(p => p.idProgram === selectedProgram)?.programName}
+                  {divisions.find(d => d.idDivision === selectedDivision)?.name}
                 </span>
               )}
-              {selectedProgram !== "all" && selectedSemester !== "all" && " • "}
+              {selectedDivision !== "all" && selectedSemester !== "all" && " • "}
               {selectedSemester !== "all" && (
                 <span className="font-medium text-gray-700">
                   Semestre {selectedSemester}
@@ -335,20 +320,15 @@ export default function GroupsPage() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
+              <BookOpen className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">Total Grupos</p>
-              <p className="text-2xl font-semibold text-gray-900">{totalGroups}</p>
-              {filteredGroups.length !== totalGroups && (
-                <p className="text-xs text-gray-500">
-                  de {filteredGroups.length} filtrados
-                </p>
-              )}
+              <p className="text-sm font-medium text-gray-900">Total Cursos</p>
+              <p className="text-2xl font-semibold text-gray-900">{totalCourses}</p>
             </div>
           </div>
         </div>
@@ -356,13 +336,11 @@ export default function GroupsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <UserCheck className="w-5 h-5 text-green-600" />
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900">Activos</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {filteredGroups.filter(g => g.status).length}
-              </p>
+              <p className="text-2xl font-semibold text-gray-900">{activeCourses}</p>
             </div>
           </div>
         </div>
@@ -370,56 +348,60 @@ export default function GroupsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-yellow-600" />
+              <Layers className="w-5 h-5 text-yellow-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">Estudiantes</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {filteredGroups.reduce((sum, g) => sum + (g.enrollmentCount || 0), 0)}
-              </p>
+              <p className="text-sm font-medium text-gray-900">Total Módulos</p>
+              <p className="text-2xl font-semibold text-gray-900">{totalModules}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Groups table */}
+      {/* Courses Table */}
       <Table
-        title={
-          selectedProgram === "all" && selectedSemester === "all"
-            ? "Grupos Académicos Registrados"
-            : "Grupos Filtrados"
-        }
+        title="Cursos Académicos Registrados"
         columns={columns}
-        data={groups}
+        data={courses}
         currentPage={currentPage}
         totalPages={totalPages}
-        currentItemsCount={groups.length}
-        totalItemsCount={totalGroups}
+        currentItemsCount={courses.length}
+        totalItemsCount={totalCourses}
         onPreviousPage={() => setCurrentPage(p => Math.max(p - 1, 1))}
         onNextPage={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
         onSearch={setSearchTerm}
-        emptyMessage={
-          selectedProgram === "all" && selectedSemester === "all"
-            ? "No se encontraron grupos académicos."
-            : "No se encontraron grupos con los filtros aplicados."
-        }
+        emptyMessage="No se encontraron cursos académicos."
       />
 
-      {/* Modal for create/edit */}
+      {/* Modal for create/edit course */}
       <Modal
-        title={selectedGroup ? "Editar grupo académico" : "Agregar nuevo grupo"}
+        title={selectedCourse ? "Editar curso académico" : "Agregar nuevo curso"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       >
-        <GroupForm
-          initialData={selectedGroup}
-          programs={programs}
-          tutors={tutors}
-          onSave={handleSaveGroup}
+        <CourseForm
+          initialData={selectedCourse}
+          divisions={divisions}
+          onSave={handleSaveCourse}
           onCancel={() => setIsModalOpen(false)}
           loading={formLoading}
         />
       </Modal>
+
+      {/* Modal for modules management */}
+      {selectedCourseForModules && (
+        <ModulesModal
+          isOpen={isModulesModalOpen}
+          onClose={() => setIsModulesModalOpen(false)}
+          courseName={selectedCourseForModules.courseName}
+          courseCode={selectedCourseForModules.courseCode}
+          idCourse={selectedCourseForModules.idCourse}
+          modules={modules}
+          loading={modulesLoading}
+          onSaveModule={handleSaveModule}
+          onDeleteModule={handleDeleteModule}
+        />
+      )}
     </>
   );
 }

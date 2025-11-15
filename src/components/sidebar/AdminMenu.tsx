@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Layers, ChevronDown, ChevronUp, University, FolderTree, BookOpen, Users } from "lucide-react";
+import { Layers, ChevronDown, ChevronUp, University, FolderTree, BookOpen, Users, UserCog } from "lucide-react";
 import NavItem from "@/components/sidebar/NavItem";
 
 type AdminMenuProps = { className?: string };
@@ -56,7 +56,7 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
 
       {open && (
         <div className="ml-6 relative mt-1" ref={listRef}>
-          {/* línea vertical principal con altura dinámica (mitad de 'Grupos') */}
+          {/* línea vertical principal con altura dinámica (mitad de 'Usuarios') */}
           <div className="absolute left-0 w-px bg-gray-300" style={{ height: lineHeight }} />
           <div className="space-y-1">
             <NavItem
@@ -78,6 +78,11 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
               href="/admin/groups"
               icon={<Users size={18} />}
               label="Grupos"
+            />
+            <NavItem
+              href="/admin/users"
+              icon={<UserCog size={18} />}
+              label="Usuarios"
               ref={lastItemRef} // <- el último para cortar la línea a la mitad
             />
           </div>
