@@ -31,15 +31,14 @@ export async function getGroupById(id: number): Promise<GroupResponse> {
   return data;
 }
 
-// === Obtener grupos por programa ===
-export async function getGroupsByProgram(idProgram: number): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/program/${idProgram}`);
-  return data;
-}
-
-// === Obtener grupos activos por programa ===
-export async function getActiveGroupsByProgram(idProgram: number): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/program/${idProgram}/active`);
+// === Obtener grupos por programa (opcionalmente solo activos) ===
+export async function getGroupsByProgram(
+  idProgram: number,
+  active?: boolean
+): Promise<GroupResponse[]> {
+  const { data } = await academicApi.get(`/groups/program/${idProgram}`, {
+    params: active !== undefined ? { active } : {},
+  });
   return data;
 }
 
@@ -52,6 +51,17 @@ export async function getGroupsByUniversity(idUniversity: number): Promise<Group
 // === Obtener grupos activos por universidad ===
 export async function getActiveGroupsByUniversity(idUniversity: number): Promise<GroupResponse[]> {
   const { data } = await academicApi.get(`/groups/university/${idUniversity}/active`);
+  return data;
+}
+
+// === Obtener grupos por división (opcionalmente solo activos) ===
+export async function getGroupsByDivision(
+  idDivision: number,
+  active?: boolean
+): Promise<GroupResponse[]> {
+  const { data } = await academicApi.get(`/groups/division/${idDivision}`, {
+    params: active !== undefined ? { active } : {},
+  });
   return data;
 }
 

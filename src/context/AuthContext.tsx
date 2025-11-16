@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { login as loginService, logout as logoutService } from "@/services/auth.service";
-import { User } from "@/types/auth";
+import { User } from "@/types/user";
 
 interface AuthContextType {
   user: User | null;
@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("university");
 
     // 🔹 Limpieza del tema desde aquí (sin useTheme)
     localStorage.removeItem("themeColor");
