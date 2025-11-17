@@ -1,6 +1,7 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MapPin, User, Edit2, Check, X } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/types/schedule";
 import type { Classroom } from "@/types/schedule";
 
@@ -23,25 +24,76 @@ interface ScheduleTableProps {
   scheduleBlocks: ScheduleBlock[];
   classrooms: Classroom[];
   timeSlots: string[];
+  editingBlockId: string | null;
+  newBlockPending: boolean;
   onBlockDragStart: (e: React.DragEvent, block: ScheduleBlock) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, day: string, time: string, timeSlots: string[]) => void;
-  onUpdateBlockClassroom: (blockId: string, classroomId: number) => void;
+  onStartEdit: (blockId: string) => void;
+  onSaveEdit: (blockId: string, professorName: string, classroomName: string) => void;
+  onCancelEdit: (blockId: string) => void;
+  onClickOutside: () => void;
 }
 
 export default function ScheduleTable({
   scheduleBlocks,
   classrooms,
   timeSlots,
+  editingBlockId,
+  newBlockPending,
   onBlockDragStart,
   onDragEnd,
   onDragOver,
   onDrop,
-  onUpdateBlockClassroom,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onClickOutside,
 }: ScheduleTableProps) {
+  const [editProfessor, setEditProfessor] = useState("");
+  const [editClassroom, setEditClassroom] = useState("");
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  // Inicializar valores cuando se entra en modo edición
+  useEffect(() => {
+    if (editingBlockId) {
+      const block = scheduleBlocks.find(b => b.id === editingBlockId);
+      if (block) {
+        setEditProfessor(block.professorName || "");
+        setEditClassroom(block.classroomCode || "");
+      }
+    }
+  }, [editingBlockId, scheduleBlocks]);
+
+  // Manejar click fuera del calendario
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tableRef.current && !tableRef.current.contains(event.target as Node)) {
+        onClickOutside();
+      }
+    };
+
+    if (editingBlockId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [editingBlockId, onClickOutside]);
+
+  const handleSaveClick = (blockId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSaveEdit(blockId, editProfessor, editClassroom);
+  };
+
+  const handleCancelClick = (blockId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCancelEdit(blockId);
+  };
+
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" ref={tableRef}>
       <div className="min-w-[1000px]">
         <table className="w-full border-collapse">
           <thead className="bg-gray-50 sticky top-0 z-10">
@@ -100,48 +152,109 @@ export default function ScheduleTable({
                       }
                     }
 
+                    const isEditing = editingBlockId === block?.id;
+
                     return (
                       <td
                         key={day.value}
                         rowSpan={rowSpan}
-                        draggable={!!block}
-                        onDragStart={(e) => block && onBlockDragStart(e, block)}
+                        draggable={!!block && !isEditing}
+                        onDragStart={(e) => block && !isEditing && onBlockDragStart(e, block)}
                         onDragEnd={onDragEnd}
                         onDragOver={onDragOver}
                         onDrop={(e) => onDrop(e, day.value, time, timeSlots)}
                         className={`border-r last:border-r-0 border-gray-200 min-h-[80px] min-w-[180px] transition-colors relative group ${
                           block 
-                            ? 'bg-primary/10 border-l-4 border-l-primary cursor-move' 
+                            ? isEditing
+                              ? 'bg-yellow-50 border-l-4 border-l-yellow-500'
+                              : 'bg-primary/10 border-l-4 border-l-primary cursor-move'
                             : 'bg-white hover:bg-gray-50'
                         }`}
                       >
                         {block ? (
                           <div className="p-2 h-full flex flex-col justify-between min-h-[80px]">
                             <div className="space-y-1">
-                              <p className="text-xs font-bold text-gray-900 truncate">
-                                {block.courseCode}
-                              </p>
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs font-bold text-gray-900 truncate flex-1">
+                                  {block.courseCode}
+                                </p>
+                                {!isEditing && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onStartEdit(block.id);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white rounded"
+                                    title="Editar información"
+                                  >
+                                    <Edit2 size={12} className="text-gray-600" />
+                                  </button>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-600 line-clamp-2">
                                 {block.courseName}
                               </p>
                             </div>
 
                             <div className="space-y-1 mt-2">
-                              <div className="flex items-center gap-1 text-xs">
-                                <MapPin size={10} className="text-gray-500 flex-shrink-0" />
-                                <select
-                                  value={block.idClassroom}
-                                  onChange={(e) => onUpdateBlockClassroom(block.id, Number(e.target.value))}
-                                  className="flex-1 bg-white text-gray-700 text-xs rounded px-1 py-0.5 border border-gray-300 cursor-pointer hover:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {classrooms.map((classroom) => (
-                                    <option key={classroom.idClassroom} value={classroom.idClassroom}>
-                                      {classroom.roomCode}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
+                              {isEditing ? (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <User size={10} className="text-gray-500 flex-shrink-0" />
+                                    <input
+                                      type="text"
+                                      value={editProfessor}
+                                      onChange={(e) => setEditProfessor(e.target.value)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      placeholder="Nombre del profesor"
+                                      autoFocus={newBlockPending}
+                                      className="flex-1 bg-white text-gray-700 text-xs rounded px-1 py-0.5 border border-gray-300 focus:ring-1 focus:ring-primary focus:outline-none"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MapPin size={10} className="text-gray-500 flex-shrink-0" />
+                                    <input
+                                      type="text"
+                                      value={editClassroom}
+                                      onChange={(e) => setEditClassroom(e.target.value)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      placeholder="Aula"
+                                      className="flex-1 bg-white text-gray-700 text-xs rounded px-1 py-0.5 border border-gray-300 focus:ring-1 focus:ring-primary focus:outline-none"
+                                    />
+                                  </div>
+                                  <div className="flex gap-1 mt-2">
+                                    <button
+                                      onClick={(e) => handleSaveClick(block.id, e)}
+                                      className="flex-1 flex items-center justify-center gap-1 bg-green-600 text-white text-xs py-1 rounded hover:bg-green-700 transition"
+                                    >
+                                      <Check size={10} />
+                                      Guardar
+                                    </button>
+                                    <button
+                                      onClick={(e) => handleCancelClick(block.id, e)}
+                                      className="flex-1 flex items-center justify-center gap-1 bg-gray-400 text-white text-xs py-1 rounded hover:bg-gray-500 transition"
+                                    >
+                                      <X size={10} />
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <User size={10} className="text-gray-500 flex-shrink-0" />
+                                    <span className={`truncate ${!block.professorName ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                      {block.professorName || "Sin asignar"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs">
+                                    <MapPin size={10} className="text-gray-500 flex-shrink-0" />
+                                    <span className={`truncate ${!block.classroomCode ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                                      {block.classroomCode || "Sin asignar"}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         ) : null}

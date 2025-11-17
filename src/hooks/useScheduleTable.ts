@@ -21,11 +21,20 @@ interface UseScheduleTableProps {
   onToast: (toast: { title: string; description?: string; type: "success" | "error" }) => void;
 }
 
+interface CourseAssignment {
+  professorName: string;
+  classroomCode: string;
+}
+
 export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps) {
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [draggedCourse, setDraggedCourse] = useState<GroupCourse | null>(null);
   const [draggedBlock, setDraggedBlock] = useState<ScheduleBlock | null>(null);
   const [dropSuccessful, setDropSuccessful] = useState(false);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [newBlockPending, setNewBlockPending] = useState(false);
+  // Almacena la asignación de profesor y aula por idCourse
+  const [courseAssignments, setCourseAssignments] = useState<Record<number, CourseAssignment>>({});
 
   const handleDragStart = (e: React.DragEvent, course: GroupCourse) => {
     setDraggedCourse(course);
@@ -186,27 +195,125 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
       return;
     }
 
+    // Verificar si el curso ya tiene asignación previa
+    const existingAssignment = courseAssignments[draggedCourse.idCourse];
+    
+    const newBlockId = `${Date.now()}-${Math.random()}`;
     const newBlock: ScheduleBlock = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: newBlockId,
       idGroupCourse: draggedCourse.idGroupCourse,
       dayOfWeek: day,
       startTime: time,
       endTime: endTime,
-      idClassroom: classrooms[0]?.idClassroom || 1,
+      idClassroom: 0,
       courseCode: draggedCourse.courseCode,
       courseName: draggedCourse.courseName,
-      professorName: draggedCourse.professorName,
-      classroomCode: classrooms[0]?.roomCode,
+      professorName: existingAssignment?.professorName || "",
+      classroomCode: existingAssignment?.classroomCode || "",
     };
 
     setScheduleBlocks(prev => [...prev, newBlock]);
     setDraggedCourse(null);
 
+    if (existingAssignment) {
+      // Si ya existe asignación, no entrar en modo edición
+      onToast({
+        title: "Clase agregada",
+        description: `${draggedCourse.courseCode} añadido con ${existingAssignment.professorName}`,
+        type: "success",
+      });
+    } else {
+      // Si no existe asignación, entrar en modo edición automáticamente
+      setEditingBlockId(newBlockId);
+      setNewBlockPending(true);
+    }
+  };
+
+  const handleStartEdit = (blockId: string) => {
+    // No permitir editar si hay un bloque nuevo pendiente
+    if (newBlockPending && editingBlockId !== blockId) {
+      onToast({
+        title: "Completa la edición actual",
+        description: "Por favor completa o cancela la edición del curso nuevo primero",
+        type: "error",
+      });
+      return;
+    }
+    setEditingBlockId(blockId);
+  };
+
+  const handleSaveEdit = (blockId: string, professorName: string, classroomName: string) => {
+    // Validar que los campos no estén vacíos
+    if (!professorName.trim() || !classroomName.trim()) {
+      onToast({
+        title: "Campos requeridos",
+        description: "Debes completar el nombre del profesor y el aula",
+        type: "error",
+      });
+      return;
+    }
+
+    // Encontrar el bloque que se está editando
+    const block = scheduleBlocks.find(b => b.id === blockId);
+    if (!block) return;
+
+    // Actualizar TODOS los bloques del mismo curso (idGroupCourse)
+    setScheduleBlocks(prev => prev.map(b => 
+      b.idGroupCourse === block.idGroupCourse
+        ? { ...b, professorName, classroomCode: classroomName }
+        : b
+    ));
+
+    // Actualizar el registro de asignaciones
+    setCourseAssignments(prev => ({
+      ...prev,
+      [block.idGroupCourse]: {
+        professorName,
+        classroomCode: classroomName,
+      }
+    }));
+
+    setEditingBlockId(null);
+    setNewBlockPending(false);
+
     onToast({
-      title: "Clase agregada",
-      description: `${draggedCourse.courseCode} añadido al horario`,
+      title: newBlockPending ? "Clase agregada" : "Información actualizada",
+      description: newBlockPending 
+        ? `${block.courseCode} añadido al horario`
+        : "Se actualizaron todas las clases de este curso",
       type: "success",
     });
+  };
+
+  const handleCancelEdit = (blockId: string) => {
+    if (newBlockPending) {
+      // Si es un bloque nuevo sin guardar, eliminarlo
+      setScheduleBlocks(prev => prev.filter(b => b.id !== blockId));
+      onToast({
+        title: "Acción cancelada",
+        description: "El curso no fue agregado",
+        type: "success",
+      });
+    }
+    setEditingBlockId(null);
+    setNewBlockPending(false);
+  };
+
+  const handleClickOutside = () => {
+    if (editingBlockId && newBlockPending) {
+      // Si hay un bloque nuevo sin guardar y se hace clic fuera, eliminarlo
+      setScheduleBlocks(prev => prev.filter(b => b.id !== editingBlockId));
+      setEditingBlockId(null);
+      setNewBlockPending(false);
+      onToast({
+        title: "Curso no agregado",
+        description: "Debes completar el profesor y el aula para agregar el curso",
+        type: "error",
+      });
+    } else if (editingBlockId) {
+      // Si es una edición normal, solo salir del modo edición
+      setEditingBlockId(null);
+    }
   };
 
   const updateBlockClassroom = (blockId: string, classroomId: number) => {
@@ -230,11 +337,18 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
     scheduleBlocks,
     draggedCourse,
     draggedBlock,
+    editingBlockId,
+    newBlockPending,
+    courseAssignments,
     handleDragStart,
     handleBlockDragStart,
     handleDragEnd,
     handleDragOver,
     handleDrop,
+    handleStartEdit,
+    handleSaveEdit,
+    handleCancelEdit,
+    handleClickOutside,
     updateBlockClassroom,
     calculateDurationHours,
   };

@@ -17,6 +17,7 @@ import ScheduleTable from "@/components/schedules/ScheduleTable";
 import { useScheduleTable } from "@/hooks/useScheduleTable";
 import { useAuth } from "@/context/AuthContext";
 import { getGroupsByDivision } from "@/services/group.service";
+import { getCoursesByDivision } from "@/services/course.service";
 import type { 
   GroupCourse,
   Classroom 
@@ -29,69 +30,6 @@ const MOCK_CLASSROOMS: Classroom[] = [
   { idClassroom: 2, roomCode: "A102", roomName: "Aula Magna", location: "Edificio A", status: true },
   { idClassroom: 3, roomCode: "B201", roomName: "Sala de Cómputo", location: "Edificio B", status: true },
   { idClassroom: 4, roomCode: "C301", roomName: "Auditorio", location: "Edificio C", status: true },
-];
-
-const MOCK_GROUP_COURSES: GroupCourse[] = [
-  { 
-    idGroupCourse: 1, 
-    idGroup: 1, 
-    idCourse: 1, 
-    idProfessor: 1, 
-    groupCode: "IDGS10-A", 
-    courseCode: "BD101", 
-    courseName: "Bases de Datos", 
-    professorName: "Dr. Juan Pérez", 
-    semester: "10", 
-    programName: "Ing. Desarrollo Software" 
-  },
-  { 
-    idGroupCourse: 2, 
-    idGroup: 1, 
-    idCourse: 2, 
-    idProfessor: 2, 
-    groupCode: "IDGS10-A", 
-    courseCode: "WEB201", 
-    courseName: "Desarrollo Web", 
-    professorName: "Ing. María García", 
-    semester: "10", 
-    programName: "Ing. Desarrollo Software" 
-  },
-  { 
-    idGroupCourse: 3, 
-    idGroup: 1, 
-    idCourse: 3, 
-    idProfessor: 3, 
-    groupCode: "IDGS10-A", 
-    courseCode: "ALG301", 
-    courseName: "Algoritmos Avanzados", 
-    professorName: "Mtro. Carlos López", 
-    semester: "10", 
-    programName: "Ing. Desarrollo Software" 
-  },
-  { 
-    idGroupCourse: 4, 
-    idGroup: 2, 
-    idCourse: 4, 
-    idProfessor: 1, 
-    groupCode: "ISC08-B", 
-    courseCode: "CALC201", 
-    courseName: "Cálculo Diferencial", 
-    professorName: "Dr. Ana Martínez", 
-    semester: "8", 
-    programName: "Ing. Sistemas Computacionales" 
-  },
-  { 
-    idGroupCourse: 5, 
-    idGroup: 2, 
-    idCourse: 5, 
-    idProfessor: 2, 
-    groupCode: "ISC08-B", 
-    courseCode: "PROG101", 
-    courseName: "Programación Estructurada", 
-    professorName: "Ing. Pedro Sánchez", 
-    semester: "8", 
-    programName: "Ing. Sistemas Computacionales" 
-  },
 ];
 
 const TIME_SLOTS = [
@@ -118,12 +56,17 @@ export default function ScheduleBuilderPage() {
   const {
     scheduleBlocks,
     draggedCourse,
+    editingBlockId,
+    newBlockPending,
     handleDragStart,
     handleBlockDragStart,
     handleDragEnd,
     handleDragOver,
     handleDrop,
-    updateBlockClassroom,
+    handleStartEdit,
+    handleSaveEdit,
+    handleCancelEdit,
+    handleClickOutside,
     calculateDurationHours,
   } = useScheduleTable({ 
     classrooms, 
@@ -143,6 +86,9 @@ export default function ScheduleBuilderPage() {
         // Cargar grupos activos de la división del usuario
         const activeGroups = await getGroupsByDivision(user.idDivision, true);
         
+        // Cargar cursos activos de la división del usuario
+        const activeCourses = await getCoursesByDivision(user.idDivision, true);
+        
         // Convertir GroupResponse a GroupWithDetails
         const groupsWithDetails: GroupWithDetails[] = activeGroups.map(g => ({
           idGroup: g.idGroup,
@@ -157,14 +103,28 @@ export default function ScheduleBuilderPage() {
           programCode: "", // Este campo no viene en GroupResponse
         }));
 
+        // Convertir CourseResponse a GroupCourse (temporal para compatibilidad)
+        const coursesAsGroupCourses: GroupCourse[] = activeCourses.map(c => ({
+          idGroupCourse: c.idCourse, // Temporal, se generará al crear el horario
+          idGroup: 0, // No está asignado a un grupo aún
+          idCourse: c.idCourse,
+          idProfessor: 0, // Se asignará al arrastrar al horario
+          groupCode: "", // Se asignará al arrastrar al horario
+          courseCode: c.courseCode,
+          courseName: c.courseName,
+          professorName: "Sin asignar", // Se asignará al arrastrar al horario
+          semester: c.semester || "",
+          programName: c.divisionName || "",
+        }));
+
         setGroups(groupsWithDetails);
-        setGroupCourses(MOCK_GROUP_COURSES);
+        setGroupCourses(coursesAsGroupCourses);
         setClassrooms(MOCK_CLASSROOMS);
       } catch (error: any) {
-        console.error("Error loading groups:", error);
+        console.error("Error loading data:", error);
         setToast({
-          title: "Error al cargar grupos",
-          description: error?.message || "No se pudieron cargar los grupos de la división",
+          title: "Error al cargar datos",
+          description: error?.message || "No se pudieron cargar los grupos y cursos de la división",
           type: "error",
         });
       } finally {
@@ -176,7 +136,7 @@ export default function ScheduleBuilderPage() {
   }, [user?.idDivision]);
 
   const availableCourses = selectedGroup 
-    ? groupCourses.filter(gc => gc.idGroup === selectedGroup)
+    ? groupCourses // Mostrar todos los cursos de la división cuando hay un grupo seleccionado
     : [];
 
   const saveSchedule = () => {
@@ -334,17 +294,17 @@ export default function ScheduleBuilderPage() {
               <>
                 <div className="mb-3 pb-3 border-b border-gray-200">
                   <p className="text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Cursos Disponibles
+                    Cursos de la División
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Arrastra al calendario →
+                    Arrastra al calendario para asignar →
                   </p>
                 </div>
 
                 <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
                   {availableCourses.map((course) => (
                     <div
-                      key={course.idGroupCourse}
+                      key={course.idCourse}
                       draggable
                       onDragStart={(e) => handleDragStart(e, course)}
                       className="bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:border-primary hover:shadow-sm transition-all group"
@@ -358,14 +318,13 @@ export default function ScheduleBuilderPage() {
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
                             {course.courseName}
                           </p>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              <Users className="w-3 h-3 text-gray-600" />
+                          {course.semester && (
+                            <div className="flex items-center gap-1 mt-1.5">
+                              <div className="px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600">
+                                Semestre {course.semester}
+                              </div>
                             </div>
-                            <p className="text-xs text-gray-500 truncate">
-                              {course.professorName}
-                            </p>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -373,7 +332,7 @@ export default function ScheduleBuilderPage() {
 
                   {availableCourses.length === 0 && (
                     <div className="text-center py-8 text-gray-500 text-sm">
-                      No hay cursos disponibles
+                      No hay cursos activos en esta división
                     </div>
                   )}
                 </div>
@@ -452,11 +411,16 @@ export default function ScheduleBuilderPage() {
                 scheduleBlocks={scheduleBlocks}
                 classrooms={classrooms}
                 timeSlots={filteredTimeSlots}
+                editingBlockId={editingBlockId}
+                newBlockPending={newBlockPending}
                 onBlockDragStart={handleBlockDragStart}
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
                 onDrop={(e, day, time) => handleDrop(e, day, time, TIME_SLOTS)}
-                onUpdateBlockClassroom={updateBlockClassroom}
+                onStartEdit={handleStartEdit}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={handleCancelEdit}
+                onClickOutside={handleClickOutside}
               />
             )}
           </div>
