@@ -6,7 +6,6 @@ import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
 import AdminMenu from "@/components/sidebar/AdminMenu";
 import NavItem from "@/components/sidebar/NavItem";
-import UniversityInfo from "@/components/sidebar/UniversityInfo";
 import { RoleLabels, UserRole } from "@/types/roles";
 
 export default function Sidebar() {
@@ -26,7 +25,21 @@ export default function Sidebar() {
         </div>
 
         {/* Institución académica */}
-        <UniversityInfo />
+        <div
+          className="mx-4 mb-3 rounded-lg px-3 py-3 flex items-center gap-3"
+          style={{ backgroundColor: "#FDFDFD", border: "1px solid #F0F0F0" }}
+        >
+          <img src="/images/uteq-logo.png" alt="UTEQ" className="w-8 h-8 rounded-md object-contain" />
+          <div className="flex flex-col min-w-0">
+            <span
+              className="text-sm font-medium text-gray-900 truncate whitespace-nowrap"
+              title="Universidad Autónoma de Querétaro"
+            >
+              Universidad Autónoma de Querétaro
+            </span>
+            <span className="text-xs text-gray-500">UTEQ</span>
+          </div>
+        </div>
 
         {/* Buscador */}
         <div className="px-4 py-3">
