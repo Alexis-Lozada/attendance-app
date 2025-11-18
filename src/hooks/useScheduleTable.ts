@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { GroupCourse, Classroom } from "@/types/schedule";
 
 interface ScheduleBlock {
@@ -20,6 +20,7 @@ interface ScheduleBlock {
 interface UseScheduleTableProps {
   classrooms: Classroom[];
   professors: Array<{ idUser: number; firstName: string; lastName: string }>;
+  initialBlocks?: ScheduleBlock[];
   onToast: (toast: { title: string; description?: string; type: "success" | "error" }) => void;
 }
 
@@ -29,8 +30,8 @@ interface CourseAssignment {
   classroomCode: string;
 }
 
-export function useScheduleTable({ classrooms, professors, onToast }: UseScheduleTableProps) {
-  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
+export function useScheduleTable({ classrooms, professors, initialBlocks = [], onToast }: UseScheduleTableProps) {
+  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>(initialBlocks);
   const [draggedCourse, setDraggedCourse] = useState<GroupCourse | null>(null);
   const [draggedBlock, setDraggedBlock] = useState<ScheduleBlock | null>(null);
   const [dropSuccessful, setDropSuccessful] = useState(false);
@@ -38,6 +39,23 @@ export function useScheduleTable({ classrooms, professors, onToast }: UseSchedul
   const [newBlockPending, setNewBlockPending] = useState(false);
   // Almacena la asignación de profesor y aula por idCourse
   const [courseAssignments, setCourseAssignments] = useState<Record<number, CourseAssignment>>({});
+
+  // Actualizar bloques cuando cambien los initialBlocks
+  useEffect(() => {
+    setScheduleBlocks(initialBlocks);
+    // Extraer las asignaciones existentes de los bloques iniciales
+    const assignments: Record<number, CourseAssignment> = {};
+    initialBlocks.forEach(block => {
+      if (block.idGroupCourse && block.idProfessor && block.professorName) {
+        assignments[block.idGroupCourse] = {
+          idProfessor: block.idProfessor,
+          professorName: block.professorName,
+          classroomCode: block.classroomCode || "",
+        };
+      }
+    });
+    setCourseAssignments(assignments);
+  }, [initialBlocks]);
 
   const handleDragStart = (e: React.DragEvent, course: GroupCourse) => {
     setDraggedCourse(course);

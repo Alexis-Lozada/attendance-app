@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getGroupsByDivision } from "@/services/group.service";
 import { getCoursesByDivision } from "@/services/course.service";
 import { getUsersByUniversity } from "@/services/user.service";
+import { getSchedulesByGroup } from "@/services/schedule.service";
 import type { 
   GroupCourse,
   Classroom 
@@ -43,11 +44,13 @@ const TIME_SLOTS = [
 export default function ScheduleBuilderPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [groups, setGroups] = useState<GroupWithDetails[]>([]);
   const [groupCourses, setGroupCourses] = useState<GroupCourse[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [professors, setProfessors] = useState<User[]>([]);
+  const [initialScheduleBlocks, setInitialScheduleBlocks] = useState<any[]>([]);
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("21:00");
   const [toast, setToast] = useState<{
@@ -73,7 +76,8 @@ export default function ScheduleBuilderPage() {
     calculateDurationHours,
   } = useScheduleTable({ 
     classrooms,
-    professors, 
+    professors,
+    initialBlocks: initialScheduleBlocks,
     onToast: setToast 
   });
 
@@ -145,6 +149,72 @@ export default function ScheduleBuilderPage() {
 
     loadData();
   }, [user?.idDivision, user?.idUniversity]);
+
+  // Cargar horarios cuando se selecciona un grupo
+  useEffect(() => {
+    const loadGroupSchedules = async () => {
+      if (!selectedGroup) {
+        setInitialScheduleBlocks([]);
+        return;
+      }
+
+      setLoadingSchedules(true);
+      
+      try {
+        const groupSchedules = await getSchedulesByGroup(selectedGroup);
+        
+        // Convertir el response a ScheduleBlocks
+        const blocks: any[] = [];
+        
+        groupSchedules.forEach((groupCourse) => {
+          const course = groupCourses.find(c => c.idCourse === groupCourse.idCourse);
+          const professor = professors.find(p => p.idUser === groupCourse.idProfessor);
+          
+          groupCourse.schedules.forEach((schedule) => {
+            // Convertir el día de español a inglés para el formato interno
+            const dayMap: Record<string, string> = {
+              "Lunes": "MONDAY",
+              "Martes": "TUESDAY",
+              "Miércoles": "WEDNESDAY",
+              "Miercoles": "WEDNESDAY",
+              "Jueves": "THURSDAY",
+              "Viernes": "FRIDAY",
+              "Sábado": "SATURDAY",
+              "Sabado": "SATURDAY",
+            };
+            
+            blocks.push({
+              id: `schedule-${schedule.idSchedule}`,
+              idGroupCourse: groupCourse.idGroupCourse,
+              dayOfWeek: dayMap[schedule.dayOfWeek] || schedule.dayOfWeek,
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              idClassroom: 0, // No tenemos el ID del aula en el response
+              idProfessor: groupCourse.idProfessor,
+              courseCode: course?.courseCode || "",
+              courseName: course?.courseName || "",
+              professorName: professor ? `${professor.firstName} ${professor.lastName}` : "",
+              classroomCode: schedule.classroom,
+            });
+          });
+        });
+        
+        setInitialScheduleBlocks(blocks);
+      } catch (error: any) {
+        console.error("Error loading group schedules:", error);
+        setToast({
+          title: "Error al cargar horarios",
+          description: error?.message || "No se pudieron cargar los horarios del grupo",
+          type: "error",
+        });
+        setInitialScheduleBlocks([]);
+      } finally {
+        setLoadingSchedules(false);
+      }
+    };
+
+    loadGroupSchedules();
+  }, [selectedGroup, groupCourses, professors]);
 
   const availableCourses = selectedGroup 
     ? groupCourses // Mostrar todos los cursos de la división cuando hay un grupo seleccionado
@@ -415,6 +485,13 @@ export default function ScheduleBuilderPage() {
                   <p className="text-xs text-gray-400 mt-1">
                     Elige un grupo del panel izquierdo para comenzar
                   </p>
+                </div>
+              </div>
+            ) : loadingSchedules ? (
+              <div className="flex items-center justify-center py-32">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                  <p className="text-sm text-gray-500 font-medium">Cargando horarios...</p>
                 </div>
               </div>
             ) : (
