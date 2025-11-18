@@ -16,36 +16,54 @@ export default function UniversityInfo() {
 
   const storageKey = "university";
 
+  // 👉 Detectar si "logo" es URL real o UUID
+  const resolveLogoUrl = async (logo: string | null | undefined): Promise<string | null> => {
+    if (!logo) return null;
+
+    const isUrl = logo.startsWith("http://") || logo.startsWith("https://");
+
+    if (isUrl) {
+      return logo; // ya es una url real
+    }
+
+    // Si no es URL → asumimos UUID y pedimos al storage-ms
+    try {
+      return await getLogoUrl(logo);
+    } catch (e) {
+      console.warn("Error obteniendo logo desde storage-ms:", e);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (!user?.idUniversity) return;
 
-    // 1️⃣ Intentar cargar desde localStorage
+    // 1️⃣ Revisar localStorage
     const cached = localStorage.getItem(storageKey);
 
     if (cached) {
       try {
         const parsed: CachedUniversity = JSON.parse(cached);
-
         setUniversity(parsed.data);
         setLogoUrl(parsed.logoUrl);
       } catch (e) {
-        console.warn("Error al leer universidad en localStorage:", e);
+        console.warn("Error al leer universidad del localStorage:", e);
       }
     }
 
-    // 2️⃣ Pedir datos frescos en background
+    // 2️⃣ Obtener siempre datos frescos en background
     const fetchUniversity = async () => {
       try {
         const data = await getUniversityById(user.idUniversity);
 
-        // obtener URL real del logo
-        const url = data.logo ? await getLogoUrl(data.logo) : null;
+        // Resolver logo (UUID o URL)
+        const realLogoUrl = await resolveLogoUrl(data.logo);
 
         setUniversity(data);
-        setLogoUrl(url);
+        setLogoUrl(realLogoUrl);
 
         // Guardar en localStorage
-        const toStore: CachedUniversity = { data, logoUrl: url };
+        const toStore: CachedUniversity = { data, logoUrl: realLogoUrl };
         localStorage.setItem(storageKey, JSON.stringify(toStore));
       } catch (error) {
         console.error("Error obteniendo universidad:", error);
