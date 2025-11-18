@@ -22,7 +22,11 @@ export default function Sidebar() {
       <div>
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 py-5">
-          <div className="bg-black text-white w-8 h-8 flex items-center justify-center rounded-md font-bold">R</div>
+          <img
+            src="/logo.svg"
+            alt="Roster Logo"
+            className="w-8 h-8 rounded-md object-contain"
+          />
           <span className="font-medium text-lg text-gray-900">Roster</span>
         </div>
 
