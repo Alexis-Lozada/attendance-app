@@ -10,6 +10,7 @@ interface ScheduleBlock {
   startTime: string;
   endTime: string;
   idClassroom: number;
+  idProfessor?: number;
   courseCode?: string;
   courseName?: string;
   professorName?: string;
@@ -18,15 +19,17 @@ interface ScheduleBlock {
 
 interface UseScheduleTableProps {
   classrooms: Classroom[];
+  professors: Array<{ idUser: number; firstName: string; lastName: string }>;
   onToast: (toast: { title: string; description?: string; type: "success" | "error" }) => void;
 }
 
 interface CourseAssignment {
+  idProfessor: number;
   professorName: string;
   classroomCode: string;
 }
 
-export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps) {
+export function useScheduleTable({ classrooms, professors, onToast }: UseScheduleTableProps) {
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
   const [draggedCourse, setDraggedCourse] = useState<GroupCourse | null>(null);
   const [draggedBlock, setDraggedBlock] = useState<ScheduleBlock | null>(null);
@@ -206,6 +209,7 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
       startTime: time,
       endTime: endTime,
       idClassroom: 0,
+      idProfessor: existingAssignment?.idProfessor || 0,
       courseCode: draggedCourse.courseCode,
       courseName: draggedCourse.courseName,
       professorName: existingAssignment?.professorName || "",
@@ -242,12 +246,12 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
     setEditingBlockId(blockId);
   };
 
-  const handleSaveEdit = (blockId: string, professorName: string, classroomName: string) => {
+  const handleSaveEdit = (blockId: string, idProfessor: number, classroomName: string) => {
     // Validar que los campos no estén vacíos
-    if (!professorName.trim() || !classroomName.trim()) {
+    if (!idProfessor || !classroomName.trim()) {
       onToast({
         title: "Campos requeridos",
-        description: "Debes completar el nombre del profesor y el aula",
+        description: "Debes seleccionar un profesor y completar el aula",
         type: "error",
       });
       return;
@@ -257,10 +261,14 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
     const block = scheduleBlocks.find(b => b.id === blockId);
     if (!block) return;
 
+    // Buscar el nombre del profesor
+    const professor = professors.find(p => p.idUser === idProfessor);
+    const professorName = professor ? `${professor.firstName} ${professor.lastName}` : "";
+
     // Actualizar TODOS los bloques del mismo curso (idGroupCourse)
     setScheduleBlocks(prev => prev.map(b => 
       b.idGroupCourse === block.idGroupCourse
-        ? { ...b, professorName, classroomCode: classroomName }
+        ? { ...b, idProfessor, professorName, classroomCode: classroomName }
         : b
     ));
 
@@ -268,6 +276,7 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
     setCourseAssignments(prev => ({
       ...prev,
       [block.idGroupCourse]: {
+        idProfessor,
         professorName,
         classroomCode: classroomName,
       }
@@ -287,13 +296,8 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
 
   const handleCancelEdit = (blockId: string) => {
     if (newBlockPending) {
-      // Si es un bloque nuevo sin guardar, eliminarlo
+      // Si es un bloque nuevo sin guardar, eliminarlo silenciosamente
       setScheduleBlocks(prev => prev.filter(b => b.id !== blockId));
-      onToast({
-        title: "Acción cancelada",
-        description: "El curso no fue agregado",
-        type: "success",
-      });
     }
     setEditingBlockId(null);
     setNewBlockPending(false);
@@ -301,15 +305,10 @@ export function useScheduleTable({ classrooms, onToast }: UseScheduleTableProps)
 
   const handleClickOutside = () => {
     if (editingBlockId && newBlockPending) {
-      // Si hay un bloque nuevo sin guardar y se hace clic fuera, eliminarlo
+      // Si hay un bloque nuevo sin guardar y se hace clic fuera, eliminarlo silenciosamente
       setScheduleBlocks(prev => prev.filter(b => b.id !== editingBlockId));
       setEditingBlockId(null);
       setNewBlockPending(false);
-      onToast({
-        title: "Curso no agregado",
-        description: "Debes completar el profesor y el aula para agregar el curso",
-        type: "error",
-      });
     } else if (editingBlockId) {
       // Si es una edición normal, solo salir del modo edición
       setEditingBlockId(null);

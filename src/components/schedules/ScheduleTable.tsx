@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, User, Edit2, Check, X } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/types/schedule";
 import type { Classroom } from "@/types/schedule";
+import type { User as UserType } from "@/types/user";
+import { getUsersByUniversity } from "@/services/user.service";
+import { useAuth } from "@/context/AuthContext";
 
 const WEEK_DAYS = DAYS_OF_WEEK.filter(day => day.value !== "SATURDAY");
 
@@ -14,6 +17,7 @@ interface ScheduleBlock {
   startTime: string;
   endTime: string;
   idClassroom: number;
+  idProfessor?: number;
   courseCode?: string;
   courseName?: string;
   professorName?: string;
@@ -31,7 +35,7 @@ interface ScheduleTableProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, day: string, time: string, timeSlots: string[]) => void;
   onStartEdit: (blockId: string) => void;
-  onSaveEdit: (blockId: string, professorName: string, classroomName: string) => void;
+  onSaveEdit: (blockId: string, idProfessor: number, classroomName: string) => void;
   onCancelEdit: (blockId: string) => void;
   onClickOutside: () => void;
 }
@@ -51,16 +55,42 @@ export default function ScheduleTable({
   onCancelEdit,
   onClickOutside,
 }: ScheduleTableProps) {
-  const [editProfessor, setEditProfessor] = useState("");
+  const { user } = useAuth();
+  const [editProfessor, setEditProfessor] = useState<number>(0);
   const [editClassroom, setEditClassroom] = useState("");
+  const [professors, setProfessors] = useState<UserType[]>([]);
+  const [loadingProfessors, setLoadingProfessors] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
+
+  // Cargar profesores al montar el componente
+  useEffect(() => {
+    const loadProfessors = async () => {
+      if (!user?.idUniversity) return;
+      
+      try {
+        setLoadingProfessors(true);
+        const users = await getUsersByUniversity(user.idUniversity, true);
+        // Filtrar solo profesores y tutores
+        const teachersAndTutors = users.filter(u => 
+          u.role === "TEACHER" || u.role === "TUTOR"
+        );
+        setProfessors(teachersAndTutors);
+      } catch (error) {
+        console.error("Error loading professors:", error);
+      } finally {
+        setLoadingProfessors(false);
+      }
+    };
+
+    loadProfessors();
+  }, [user?.idUniversity]);
 
   // Inicializar valores cuando se entra en modo edición
   useEffect(() => {
     if (editingBlockId) {
       const block = scheduleBlocks.find(b => b.id === editingBlockId);
       if (block) {
-        setEditProfessor(block.professorName || "");
+        setEditProfessor(block.idProfessor || 0);
         setEditClassroom(block.classroomCode || "");
       }
     }
@@ -201,15 +231,21 @@ export default function ScheduleTable({
                                 <>
                                   <div className="flex items-center gap-1">
                                     <User size={10} className="text-gray-500 flex-shrink-0" />
-                                    <input
-                                      type="text"
+                                    <select
                                       value={editProfessor}
-                                      onChange={(e) => setEditProfessor(e.target.value)}
+                                      onChange={(e) => setEditProfessor(Number(e.target.value))}
                                       onClick={(e) => e.stopPropagation()}
-                                      placeholder="Nombre del profesor"
                                       autoFocus={newBlockPending}
+                                      disabled={loadingProfessors}
                                       className="flex-1 bg-white text-gray-700 text-xs rounded px-1 py-0.5 border border-gray-300 focus:ring-1 focus:ring-primary focus:outline-none"
-                                    />
+                                    >
+                                      <option value={0}>Seleccionar profesor</option>
+                                      {professors.map(prof => (
+                                        <option key={prof.idUser} value={prof.idUser}>
+                                          {prof.firstName} {prof.lastName}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <MapPin size={10} className="text-gray-500 flex-shrink-0" />

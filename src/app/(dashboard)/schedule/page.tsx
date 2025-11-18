@@ -18,11 +18,13 @@ import { useScheduleTable } from "@/hooks/useScheduleTable";
 import { useAuth } from "@/context/AuthContext";
 import { getGroupsByDivision } from "@/services/group.service";
 import { getCoursesByDivision } from "@/services/course.service";
+import { getUsersByUniversity } from "@/services/user.service";
 import type { 
   GroupCourse,
   Classroom 
 } from "@/types/schedule";
 import type { GroupWithDetails } from "@/types/group";
+import type { User } from "@/types/user";
 
 // Mock data
 const MOCK_CLASSROOMS: Classroom[] = [
@@ -45,6 +47,7 @@ export default function ScheduleBuilderPage() {
   const [groups, setGroups] = useState<GroupWithDetails[]>([]);
   const [groupCourses, setGroupCourses] = useState<GroupCourse[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [professors, setProfessors] = useState<User[]>([]);
   const [startTime, setStartTime] = useState("07:00");
   const [endTime, setEndTime] = useState("21:00");
   const [toast, setToast] = useState<{
@@ -69,13 +72,14 @@ export default function ScheduleBuilderPage() {
     handleClickOutside,
     calculateDurationHours,
   } = useScheduleTable({ 
-    classrooms, 
+    classrooms,
+    professors, 
     onToast: setToast 
   });
 
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.idDivision) {
+      if (!user?.idDivision || !user?.idUniversity) {
         setLoading(false);
         return;
       }
@@ -88,6 +92,12 @@ export default function ScheduleBuilderPage() {
         
         // Cargar cursos activos de la división del usuario
         const activeCourses = await getCoursesByDivision(user.idDivision, true);
+        
+        // Cargar profesores activos de la universidad
+        const allUsers = await getUsersByUniversity(user.idUniversity, true);
+        const teachersAndTutors = allUsers.filter(u => 
+          u.role === "TEACHER" || u.role === "TUTOR"
+        );
         
         // Convertir GroupResponse a GroupWithDetails
         const groupsWithDetails: GroupWithDetails[] = activeGroups.map(g => ({
@@ -119,6 +129,7 @@ export default function ScheduleBuilderPage() {
 
         setGroups(groupsWithDetails);
         setGroupCourses(coursesAsGroupCourses);
+        setProfessors(teachersAndTutors);
         setClassrooms(MOCK_CLASSROOMS);
       } catch (error: any) {
         console.error("Error loading data:", error);
@@ -133,7 +144,7 @@ export default function ScheduleBuilderPage() {
     };
 
     loadData();
-  }, [user?.idDivision]);
+  }, [user?.idDivision, user?.idUniversity]);
 
   const availableCourses = selectedGroup 
     ? groupCourses // Mostrar todos los cursos de la división cuando hay un grupo seleccionado
