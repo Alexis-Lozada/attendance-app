@@ -51,8 +51,8 @@ export default function ScheduleBuilderPage() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [professors, setProfessors] = useState<User[]>([]);
   const [initialScheduleBlocks, setInitialScheduleBlocks] = useState<any[]>([]);
-  const [startTime, setStartTime] = useState("07:00");
-  const [endTime, setEndTime] = useState("21:00");
+  const [startTime, setStartTime] = useState("08:00");
+  const [endTime, setEndTime] = useState("13:00");
   const [toast, setToast] = useState<{
     title: string;
     description?: string;
@@ -155,6 +155,9 @@ export default function ScheduleBuilderPage() {
     const loadGroupSchedules = async () => {
       if (!selectedGroup) {
         setInitialScheduleBlocks([]);
+        // Restablecer al rango por defecto cuando no hay grupo seleccionado
+        setStartTime("08:00");
+        setEndTime("13:00");
         return;
       }
 
@@ -171,7 +174,8 @@ export default function ScheduleBuilderPage() {
           const professor = professors.find(p => p.idUser === groupCourse.idProfessor);
           
           groupCourse.schedules.forEach((schedule) => {
-            // Convertir el día de español a inglés para el formato interno
+            // Si el backend ya devuelve en inglés, usar directamente
+            // Si aún devuelve en español (legacy), convertir
             const dayMap: Record<string, string> = {
               "Lunes": "MONDAY",
               "Martes": "TUESDAY",
@@ -183,11 +187,16 @@ export default function ScheduleBuilderPage() {
               "Sabado": "SATURDAY",
             };
             
+            // Si viene en inglés mayúsculas, usar tal cual, si no, mapear
+            const dayOfWeek = schedule.dayOfWeek.toUpperCase() === schedule.dayOfWeek
+              ? schedule.dayOfWeek
+              : (dayMap[schedule.dayOfWeek] || schedule.dayOfWeek);
+            
             blocks.push({
               id: `schedule-${schedule.idSchedule}`,
               idGroupCourse: groupCourse.idGroupCourse,
               idCourse: groupCourse.idCourse,
-              dayOfWeek: dayMap[schedule.dayOfWeek] || schedule.dayOfWeek,
+              dayOfWeek: dayOfWeek,
               startTime: schedule.startTime,
               endTime: schedule.endTime,
               idClassroom: 0, // No tenemos el ID del aula en el response
@@ -201,6 +210,37 @@ export default function ScheduleBuilderPage() {
         });
         
         setInitialScheduleBlocks(blocks);
+        
+        // Ajustar el rango de horas según los horarios cargados
+        if (blocks.length > 0) {
+          // Encontrar la hora más temprana y más tardía
+          let earliestTime = "23:59";
+          let latestTime = "00:00";
+          
+          blocks.forEach(block => {
+            if (block.startTime < earliestTime) {
+              earliestTime = block.startTime;
+            }
+            if (block.endTime > latestTime) {
+              latestTime = block.endTime;
+            }
+          });
+          
+          // Redondear hacia abajo para startTime y hacia arriba para endTime
+          const earliestHour = parseInt(earliestTime.split(':')[0]);
+          const latestHour = parseInt(latestTime.split(':')[0]);
+          const latestMinutes = parseInt(latestTime.split(':')[1]);
+          
+          // Si hay minutos en la hora final, redondear hacia arriba
+          const adjustedEndHour = latestMinutes > 0 ? latestHour + 1 : latestHour;
+          
+          setStartTime(`${String(earliestHour).padStart(2, '0')}:00`);
+          setEndTime(`${String(adjustedEndHour).padStart(2, '0')}:00`);
+        } else {
+          // Si no hay horarios, usar el rango por defecto 08:00 - 13:00
+          setStartTime("08:00");
+          setEndTime("13:00");
+        }
       } catch (error: any) {
         console.error("Error loading group schedules:", error);
         setToast({
@@ -267,16 +307,6 @@ export default function ScheduleBuilderPage() {
         courseMap.get(block.idCourse)!.push(block);
       });
 
-      // Mapear días de inglés a español para la API
-      const dayMapToSpanish: Record<string, string> = {
-        "MONDAY": "Lunes",
-        "TUESDAY": "Martes",
-        "WEDNESDAY": "Miércoles",
-        "THURSDAY": "Jueves",
-        "FRIDAY": "Viernes",
-        "SATURDAY": "Sábado",
-      };
-
       // Construir el payload para la API
       const groupCourses = Array.from(courseMap.entries()).map(([idCourse, blocks]) => {
         // Tomar el primer bloque para obtener info general del curso
@@ -291,7 +321,7 @@ export default function ScheduleBuilderPage() {
 
           return {
             idSchedule, // Opcional: presente si es un horario existente
-            dayOfWeek: dayMapToSpanish[block.dayOfWeek] || block.dayOfWeek,
+            dayOfWeek: block.dayOfWeek, // Enviar en inglés y mayúsculas (MONDAY, TUESDAY, etc.)
             startTime: block.startTime,
             endTime: block.endTime,
             classroom: block.classroomCode || "",
