@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import AdminMenu from "@/components/sidebar/AdminMenu";
 import NavItem from "@/components/sidebar/NavItem";
 import UniversityInfo from "@/components/sidebar/UniversityInfo";
+import ProfileInfo from "@/components/sidebar/ProfileInfo";
 import { RoleLabels, UserRole } from "@/types/roles";
 
 export default function Sidebar() {
@@ -65,18 +66,7 @@ export default function Sidebar() {
       </div>
 
       {/* Parte inferior fija (usuario) */}
-      <Link
-        href="/profile"
-        className="px-4 py-3 flex items-center gap-3 border-t border-gray-100 cursor-pointer"
-      >
-        <img src="/images/user.jpg" alt="User" className="w-10 h-10 rounded-md" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {user ? `${user.firstName} ${user.lastName}` : "Invitado"}
-          </p>
-          <p className="text-xs text-gray-500">{roleLabel}</p>
-        </div>
-      </Link>
+      <ProfileInfo />
     </aside>
   );
 }

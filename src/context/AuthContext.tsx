@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
     localStorage.removeItem("university");
+    localStorage.removeItem("profile");
 
     // Limpieza del tema
     localStorage.removeItem("themeColor");
