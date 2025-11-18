@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("user", JSON.stringify(user));
 
-      router.push("/");
+      router.push("/dashboard");
     } finally {
       setLoading(false);
     }
