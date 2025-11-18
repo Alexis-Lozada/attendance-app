@@ -13,6 +13,7 @@ const WEEK_DAYS = DAYS_OF_WEEK.filter(day => day.value !== "SATURDAY");
 interface ScheduleBlock {
   id: string;
   idGroupCourse: number;
+  idCourse: number;
   dayOfWeek: string;
   startTime: string;
   endTime: string;

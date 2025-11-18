@@ -6,6 +6,7 @@ import type { GroupCourse, Classroom } from "@/types/schedule";
 interface ScheduleBlock {
   id: string;
   idGroupCourse: number;
+  idCourse: number;
   dayOfWeek: string;
   startTime: string;
   endTime: string;
@@ -43,11 +44,12 @@ export function useScheduleTable({ classrooms, professors, initialBlocks = [], o
   // Actualizar bloques cuando cambien los initialBlocks
   useEffect(() => {
     setScheduleBlocks(initialBlocks);
-    // Extraer las asignaciones existentes de los bloques iniciales
+    // Extraer las asignaciones existentes de los bloques iniciales por idCourse
     const assignments: Record<number, CourseAssignment> = {};
     initialBlocks.forEach(block => {
-      if (block.idGroupCourse && block.idProfessor && block.professorName) {
-        assignments[block.idGroupCourse] = {
+      if (block.idCourse && block.idProfessor && block.professorName) {
+        // Usar idCourse como clave para que todos los bloques del mismo curso compartan asignación
+        assignments[block.idCourse] = {
           idProfessor: block.idProfessor,
           professorName: block.professorName,
           classroomCode: block.classroomCode || "",
@@ -216,13 +218,14 @@ export function useScheduleTable({ classrooms, professors, initialBlocks = [], o
       return;
     }
 
-    // Verificar si el curso ya tiene asignación previa
+    // Verificar si el curso ya tiene asignación previa (buscar por idCourse)
     const existingAssignment = courseAssignments[draggedCourse.idCourse];
     
     const newBlockId = `${Date.now()}-${Math.random()}`;
     const newBlock: ScheduleBlock = {
       id: newBlockId,
       idGroupCourse: draggedCourse.idGroupCourse,
+      idCourse: draggedCourse.idCourse,
       dayOfWeek: day,
       startTime: time,
       endTime: endTime,
@@ -283,17 +286,17 @@ export function useScheduleTable({ classrooms, professors, initialBlocks = [], o
     const professor = professors.find(p => p.idUser === idProfessor);
     const professorName = professor ? `${professor.firstName} ${professor.lastName}` : "";
 
-    // Actualizar TODOS los bloques del mismo curso (idGroupCourse)
+    // Actualizar TODOS los bloques del mismo curso (por idCourse, no idGroupCourse)
     setScheduleBlocks(prev => prev.map(b => 
-      b.idGroupCourse === block.idGroupCourse
+      b.idCourse === block.idCourse
         ? { ...b, idProfessor, professorName, classroomCode: classroomName }
         : b
     ));
 
-    // Actualizar el registro de asignaciones
+    // Actualizar el registro de asignaciones usando idCourse como clave
     setCourseAssignments(prev => ({
       ...prev,
-      [block.idGroupCourse]: {
+      [block.idCourse]: {
         idProfessor,
         professorName,
         classroomCode: classroomName,

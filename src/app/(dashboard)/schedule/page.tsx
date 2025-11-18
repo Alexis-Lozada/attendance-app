@@ -186,6 +186,7 @@ export default function ScheduleBuilderPage() {
             blocks.push({
               id: `schedule-${schedule.idSchedule}`,
               idGroupCourse: groupCourse.idGroupCourse,
+              idCourse: groupCourse.idCourse,
               dayOfWeek: dayMap[schedule.dayOfWeek] || schedule.dayOfWeek,
               startTime: schedule.startTime,
               endTime: schedule.endTime,
