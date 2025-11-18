@@ -8,13 +8,16 @@ import Spinner from "@/components/ui/Spinner";
 import { University } from "@/types/university";
 import { getUniversityById, getLogoUrl } from "@/services/university.service";
 import { useAuth } from "@/context/AuthContext";
+import { useRoleGuard } from "@/hooks/auth/useRoleGuard";
 
 export default function UniversityPage() {
   const { user } = useAuth();
+  const { ready } = useRoleGuard("ADMIN");
   const [university, setUniversity] = useState<University | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready) return;
     if (!user?.idUniversity) return;
 
     const loadUniversity = async () => {
@@ -43,7 +46,7 @@ export default function UniversityPage() {
     };
 
     loadUniversity();
-  }, [user?.idUniversity]);
+  }, [ready, user?.idUniversity]);
 
   if (loading) return <Spinner text="Cargando universidad..." fullScreen />;
   if (!university)

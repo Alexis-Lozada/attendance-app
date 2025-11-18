@@ -55,7 +55,7 @@ export default function Sidebar() {
 
         <nav className="space-y-1 text-sm">
           <NavItem href="/dashboard" icon={<LayoutDashboard size={18} />} label="Dashboard" withConnector={false} />
-          <AdminMenu className="" />
+          {(user?.role === "ADMIN" || user?.role === "COORDINATOR") && <AdminMenu className="" />}
           <NavItem href="/attendance" icon={<Clock size={18} />} label="Asistencia" withConnector={false} />
           <NavItem href="/schedule" icon={<Calendar size={18} />} label="Horario" withConnector={false} />
           <NavItem href="/courses" icon={<BookOpen size={18} />} label="Cursos" withConnector={false} />

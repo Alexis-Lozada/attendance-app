@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Layers, ChevronDown, ChevronUp, University, FolderTree, BookOpen, Users, UserCog } from "lucide-react";
 import NavItem from "@/components/sidebar/NavItem";
+import { useAuth } from "@/context/AuthContext";
 
 type AdminMenuProps = { className?: string };
 
 export default function AdminMenu({ className = "" }: AdminMenuProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Abre automáticamente en /admin/* después de hidratar
@@ -59,11 +61,13 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
           {/* línea vertical principal con altura dinámica (mitad de 'Usuarios') */}
           <div className="absolute left-0 w-px bg-gray-300" style={{ height: lineHeight }} />
           <div className="space-y-1">
+            {user?.role === "ADMIN" && (
             <NavItem
               href="/admin/university"
               icon={<University size={18} />}
               label="Universidad"
             />
+            )}
             <NavItem
               href="/admin/divisions"
               icon={<FolderTree size={18} />}

@@ -9,7 +9,8 @@ interface AuthContextType {
   user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
-  loading: boolean;
+  loading: boolean;          // loading por login/logout
+  initializing: boolean;     // (loading inicial)
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
 
   const router = useRouter();
 
@@ -38,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+
+    setInitializing(false);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -75,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("user");
     localStorage.removeItem("university");
 
-    // 🔹 Limpieza del tema desde aquí (sin useTheme)
+    // Limpieza del tema
     localStorage.removeItem("themeColor");
     document.documentElement.style.setProperty("--primary-color", "#3B82F6");
 
@@ -83,7 +87,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, refreshToken, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        refreshToken,
+        loading,
+        initializing,
+        login,
+        logout
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
