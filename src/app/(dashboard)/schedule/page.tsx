@@ -213,29 +213,22 @@ export default function ScheduleBuilderPage() {
         
         // Ajustar el rango de horas según los horarios cargados
         if (blocks.length > 0) {
-          // Encontrar la hora más temprana y más tardía
-          let earliestTime = "23:59";
-          let latestTime = "00:00";
+          // Encontrar la hora más temprana de inicio y la hora más tardía de inicio
+          let earliestStartTime = "23:59";
+          let latestStartTime = "00:00";
           
           blocks.forEach(block => {
-            if (block.startTime < earliestTime) {
-              earliestTime = block.startTime;
+            if (block.startTime < earliestStartTime) {
+              earliestStartTime = block.startTime;
             }
-            if (block.endTime > latestTime) {
-              latestTime = block.endTime;
+            if (block.startTime > latestStartTime) {
+              latestStartTime = block.startTime;
             }
           });
           
-          // Redondear hacia abajo para startTime y hacia arriba para endTime
-          const earliestHour = parseInt(earliestTime.split(':')[0]);
-          const latestHour = parseInt(latestTime.split(':')[0]);
-          const latestMinutes = parseInt(latestTime.split(':')[1]);
-          
-          // Si hay minutos en la hora final, redondear hacia arriba
-          const adjustedEndHour = latestMinutes > 0 ? latestHour + 1 : latestHour;
-          
-          setStartTime(`${String(earliestHour).padStart(2, '0')}:00`);
-          setEndTime(`${String(adjustedEndHour).padStart(2, '0')}:00`);
+          // Usar las horas de inicio como rango
+          setStartTime(earliestStartTime);
+          setEndTime(latestStartTime);
         } else {
           // Si no hay horarios, usar el rango por defecto 08:00 - 13:00
           setStartTime("08:00");
@@ -381,6 +374,8 @@ export default function ScheduleBuilderPage() {
     }
   }, [toast]);
 
+  // endTime ahora representa la última hora donde INICIA una clase
+  // Por lo tanto, debe ser inclusivo en el filtro
   const filteredTimeSlots = TIME_SLOTS.filter(time => time >= startTime && time <= endTime);
 
   if (loading) {
