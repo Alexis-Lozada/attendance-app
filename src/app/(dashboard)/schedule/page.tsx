@@ -19,7 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getGroupsByDivision } from "@/services/group.service";
 import { getCoursesByDivision } from "@/services/course.service";
 import { getUsersByUniversity } from "@/services/user.service";
-import { getSchedulesByGroup } from "@/services/schedule.service";
+import { getSchedulesByGroup, createOrUpdateGroupSchedules } from "@/services/schedule.service";
 import type { 
   GroupCourse,
   Classroom 
@@ -221,7 +221,16 @@ export default function ScheduleBuilderPage() {
     ? groupCourses // Mostrar todos los cursos de la división cuando hay un grupo seleccionado
     : [];
 
-  const saveSchedule = () => {
+  const saveSchedule = async () => {
+    if (!selectedGroup) {
+      setToast({
+        title: "Grupo no seleccionado",
+        description: "Selecciona un grupo antes de guardar",
+        type: "error",
+      });
+      return;
+    }
+
     if (scheduleBlocks.length === 0) {
       setToast({
         title: "Horario vacío",
@@ -231,12 +240,108 @@ export default function ScheduleBuilderPage() {
       return;
     }
 
-    console.log("Saving schedule:", scheduleBlocks);
-    setToast({
-      title: "Horario guardado",
-      description: `${scheduleBlocks.length} clases guardadas exitosamente`,
-      type: "success",
-    });
+    // Validar que todos los bloques tengan profesor y aula asignados
+    const incompleteBlocks = scheduleBlocks.filter(
+      block => !block.idProfessor || !block.classroomCode?.trim()
+    );
+
+    if (incompleteBlocks.length > 0) {
+      setToast({
+        title: "Horarios incompletos",
+        description: `Hay ${incompleteBlocks.length} clase(s) sin profesor o aula asignada`,
+        type: "error",
+      });
+      return;
+    }
+
+    setLoadingSchedules(true);
+
+    try {
+      // Agrupar bloques por curso (idCourse)
+      const courseMap = new Map<number, typeof scheduleBlocks>();
+      
+      scheduleBlocks.forEach(block => {
+        if (!courseMap.has(block.idCourse)) {
+          courseMap.set(block.idCourse, []);
+        }
+        courseMap.get(block.idCourse)!.push(block);
+      });
+
+      // Mapear días de inglés a español para la API
+      const dayMapToSpanish: Record<string, string> = {
+        "MONDAY": "Lunes",
+        "TUESDAY": "Martes",
+        "WEDNESDAY": "Miércoles",
+        "THURSDAY": "Jueves",
+        "FRIDAY": "Viernes",
+        "SATURDAY": "Sábado",
+      };
+
+      // Construir el payload para la API
+      const groupCourses = Array.from(courseMap.entries()).map(([idCourse, blocks]) => {
+        // Tomar el primer bloque para obtener info general del curso
+        const firstBlock = blocks[0];
+        
+        // Extraer el idSchedule si existe (para updates)
+        const schedules = blocks.map(block => {
+          // El ID original viene en el formato "schedule-{idSchedule}"
+          const idSchedule = block.id.startsWith('schedule-') 
+            ? parseInt(block.id.replace('schedule-', ''))
+            : undefined;
+
+          return {
+            idSchedule, // Opcional: presente si es un horario existente
+            dayOfWeek: dayMapToSpanish[block.dayOfWeek] || block.dayOfWeek,
+            startTime: block.startTime,
+            endTime: block.endTime,
+            classroom: block.classroomCode || "",
+          };
+        });
+
+        return {
+          idGroupCourse: firstBlock.idGroupCourse || undefined,
+          idCourse: idCourse,
+          idProfessor: firstBlock.idProfessor!,
+          schedules,
+        };
+      });
+
+      const payload = {
+        idGroup: selectedGroup,
+        groupCourses,
+      };
+
+      console.log("Payload to save:", JSON.stringify(payload, null, 2));
+
+      // Llamar al servicio
+      await createOrUpdateGroupSchedules(payload);
+
+      setToast({
+        title: "Horario guardado",
+        description: `Se guardaron exitosamente ${scheduleBlocks.length} clases`,
+        type: "success",
+      });
+
+      // Recargar los horarios para obtener los IDs actualizados
+      setTimeout(() => {
+        if (selectedGroup) {
+          // Trigger reload by changing selectedGroup state
+          const currentGroup = selectedGroup;
+          setSelectedGroup(null);
+          setTimeout(() => setSelectedGroup(currentGroup), 100);
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      console.error("Error saving schedule:", error);
+      setToast({
+        title: "Error al guardar",
+        description: error?.message || "No se pudo guardar el horario",
+        type: "error",
+      });
+    } finally {
+      setLoadingSchedules(false);
+    }
   };
 
   useEffect(() => {
@@ -291,11 +396,20 @@ export default function ScheduleBuilderPage() {
 
           <button
             onClick={saveSchedule}
-            disabled={scheduleBlocks.length === 0}
+            disabled={scheduleBlocks.length === 0 || loadingSchedules}
             className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-lg flex items-center justify-center gap-2 hover:brightness-95 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save size={18} />
-            Guardar Horario
+            {loadingSchedules ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save size={18} />
+                Guardar Horario
+              </>
+            )}
           </button>
         </div>
       </header>
