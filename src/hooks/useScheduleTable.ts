@@ -153,9 +153,10 @@ export function useScheduleTable({ classrooms, professors, initialBlocks = [], o
 
     if (!draggedCourse) return;
 
+    // Buscar bloques adyacentes del mismo curso (por idCourse, no idGroupCourse)
     const adjacentBlock = scheduleBlocks.find(block => 
       block.dayOfWeek === day &&
-      block.idGroupCourse === draggedCourse.idGroupCourse &&
+      block.idCourse === draggedCourse.idCourse &&
       (block.endTime === time || block.startTime === calculateEndTime(time, 1))
     );
 
