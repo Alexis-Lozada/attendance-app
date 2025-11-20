@@ -65,6 +65,12 @@ export async function getGroupsByDivision(
   return data;
 }
 
+// === Obtener grupos por tutor ===
+export async function getGroupsByTutor(idTutor: number): Promise<GroupResponse[]> {
+  const { data } = await academicApi.get(`/groups/tutor/${idTutor}`);
+  return data;
+}
+
 // === Crear nuevo grupo ===
 export async function createGroup(payload: {
   idProgram: number;

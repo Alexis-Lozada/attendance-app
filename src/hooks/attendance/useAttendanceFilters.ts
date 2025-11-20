@@ -5,29 +5,34 @@ import { UserRole } from "@/types/roles";
 import { useAuth } from "@/context/AuthContext";
 
 // Servicios
-import { 
-  getGroupCoursesByProfessor, 
+import {
+  getGroupCoursesByProfessor,
   getGroupCoursesByGroup,
   GroupCourseResponse
 } from "@/services/groupCourse.service";
 
-import { 
-  getEnrollmentsByStudent, 
-  EnrollmentResponse 
+import {
+  getEnrollmentsByStudent,
+  EnrollmentResponse
 } from "@/services/enrollment.service";
+
+import {
+  getGroupsByTutor,
+  GroupResponse
+} from "@/services/group.service";
 
 interface UseAttendanceFiltersResult {
   loading: boolean;
   error: string | null;
 
-  groups: { label: string; value: string }[];
+  groups: { label: string; value: string; puedePasarLista: boolean }[];
   courses: { label: string; value: string }[];
 
   selectedGroup: string | null;
   selectedCourse: string | null;
 
   setSelectedGroup: (g: string) => void;
-  setSelectedCourse: (c: string) => void;
+  setSelectedCourse: (c: string | null) => void;
 }
 
 export function useAttendanceFilters(): UseAttendanceFiltersResult {
@@ -36,14 +41,17 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [groups, setGroups] = useState<{ label: string; value: string }[]>([]);
+  const [groups, setGroups] = useState<
+    { label: string; value: string; puedePasarLista: boolean }[]
+  >([]);
+
   const [courses, setCourses] = useState<{ label: string; value: string }[]>([]);
 
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
 
   // ==============================
-  //     CARGAR DATOS INICIALES
+  //          LOAD DATA
   // ==============================
   useEffect(() => {
     if (!user) return;
@@ -53,16 +61,18 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
       setError(null);
 
       try {
-        if (user.role === UserRole.TEACHER || user.role === UserRole.TUTOR) {
-          await loadTeacherOrTutor();
+        if (user.role === UserRole.TEACHER) {
+          await loadTeacher();
+        } else if (user.role === UserRole.TUTOR) {
+          await loadTutor();
         } else if (user.role === UserRole.STUDENT) {
           await loadStudent();
         } else {
-          throw new Error("El usuario no tiene permisos para esta pantalla");
+          throw new Error("No tienes permisos para esta pantalla.");
         }
       } catch (err: any) {
         console.error(err);
-        setError(err.message || "Error al cargar datos de asistencia");
+        setError(err.message || "Error al cargar asistencia.");
       }
 
       setLoading(false);
@@ -72,56 +82,125 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
   }, [user]);
 
   // ==============================
-  //     TEACHER / TUTOR
+  //        DINÁMICA: GRUPO CAMBIADO
   // ==============================
-  const loadTeacherOrTutor = async () => {
+  useEffect(() => {
+    if (!selectedGroup) return;
+
+    const loadCourses = async () => {
+      const groupObj = groups.find((g) => g.label === selectedGroup);
+      if (!groupObj) return;
+
+      // Si NO puede pasar lista, no cargar cursos
+      if (!groupObj.puedePasarLista) {
+        setCourses([]);
+        setSelectedCourse(null);
+        return;
+      }
+
+      // Si puede pasar lista, cargar cursos reales del grupo
+      const list = await getGroupCoursesByGroup(Number(groupObj.value));
+
+      const courseOptions = list.map((item) => ({
+        label: item.courseName || "",
+        value: String(item.idCourse)
+      }));
+
+      setCourses(courseOptions);
+      setSelectedCourse(courseOptions[0]?.label || null);
+    };
+
+    loadCourses();
+  }, [selectedGroup, groups]);
+
+  // ==============================
+  //            TEACHER
+  // ==============================
+  const loadTeacher = async () => {
     const list = await getGroupCoursesByProfessor(user!.idUser);
 
-    // Grupos únicos
-    const groupMap = new Map<string, string>();
+    const groupMap = new Map<
+      string,
+      { value: string; puedePasarLista: boolean }
+    >();
 
     list.forEach((item) => {
-      if (item.groupCode) groupMap.set(item.groupCode, String(item.idGroup));
+      if (item.groupCode) {
+        groupMap.set(item.groupCode, {
+          value: String(item.idGroup),
+          puedePasarLista: true
+        });
+      }
     });
 
-    const groupOptions = Array.from(groupMap.entries()).map(([label, value]) => ({
-      label,
-      value,
-    }));
-
-    // Cursos (NO agrupados por grupo)
-    const courseOptions = list.map((item) => ({
-      label: item.courseName || "",
-      value: String(item.idCourse),
-    }));
+    const groupOptions = Array.from(groupMap.entries()).map(
+      ([label, obj]) => ({
+        label,
+        value: obj.value,
+        puedePasarLista: obj.puedePasarLista
+      })
+    );
 
     setGroups(groupOptions);
-    setCourses(courseOptions);
 
     setSelectedGroup(groupOptions[0]?.label || null);
-    setSelectedCourse(courseOptions[0]?.label || null);
   };
 
   // ==============================
-  //     STUDENT
+  //            TUTOR
+  // ==============================
+  const loadTutor = async () => {
+    const tutorGroups = await getGroupsByTutor(user!.idUser);
+    const professorGroups = await getGroupCoursesByProfessor(user!.idUser);
+
+    const map = new Map<
+      number,
+      { label: string; value: string; puedePasarLista: boolean }
+    >();
+
+    tutorGroups.forEach((g) => {
+      map.set(g.idGroup, {
+        label: g.groupCode,
+        value: String(g.idGroup),
+        puedePasarLista: false
+      });
+    });
+
+    professorGroups.forEach((gc) => {
+      map.set(gc.idGroup, {
+        label: gc.groupCode!,
+        value: String(gc.idGroup),
+        puedePasarLista: true
+      });
+    });
+
+    const finalGroups = Array.from(map.values());
+
+    setGroups(finalGroups);
+    setSelectedGroup(finalGroups[0]?.label || null);
+  };
+
+  // ==============================
+  //            STUDENT
   // ==============================
   const loadStudent = async () => {
-    const enrollments: EnrollmentResponse[] = await getEnrollmentsByStudent(user!.idUser);
-
+    const enrollments = await getEnrollmentsByStudent(user!.idUser);
     const active = enrollments.find((e) => e.status === true);
+    if (!active) throw new Error("No tienes grupo activo.");
 
-    if (!active) throw new Error("El estudiante no tiene un grupo activo.");
-
-    // Obtener cursos del grupo
-    const groupCourses: GroupCourseResponse[] = await getGroupCoursesByGroup(active.idGroup);
+    const groupCourses = await getGroupCoursesByGroup(active.idGroup);
 
     const groupOptions = [
-      { label: active.groupCode, value: String(active.idGroup) }
+      {
+        label: active.groupCode,
+        value: String(active.idGroup),
+        puedePasarLista: true
+      }
     ];
 
-    const courseOptions = groupCourses.map((item) => ({
-      label: item.courseName || "",
-      value: String(item.idCourse),
+    const courseOptions = groupCourses.map((gc) => ({
+      label: gc.courseName || "",
+      value: String(gc.idCourse)
     }));
 
     setGroups(groupOptions);
@@ -139,6 +218,6 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     selectedGroup,
     selectedCourse,
     setSelectedGroup,
-    setSelectedCourse,
+    setSelectedCourse
   };
 }

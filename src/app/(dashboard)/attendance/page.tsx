@@ -1,7 +1,7 @@
 "use client";
 
-import FilterSelect from "@/components/attendance/FilterSelect";
 import { Users, BookOpen } from "lucide-react";
+import FilterSelect from "@/components/attendance/FilterSelect";
 import { useAttendanceFilters } from "@/hooks/attendance/useAttendanceFilters";
 
 export default function AttendancePage() {
@@ -16,55 +16,86 @@ export default function AttendancePage() {
     setSelectedCourse,
   } = useAttendanceFilters();
 
-  if (loading) return <p>Cargando...</p>;
+  if (loading) return <p className="text-gray-700">Cargando filtros...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
+
+  const groupInfo = groups.find((g) => g.label === selectedGroup);
+  const puedePasarLista = groupInfo?.puedePasarLista ?? false;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
 
-      {/* FILTROS */}
+      {/* Columna izquierda */}
       <div className="space-y-6 min-w-[240px] flex-shrink-0 lg:w-1/4">
-
+        
+        {/* Filtro Grupo */}
         <FilterSelect
           title="Grupo"
           value={selectedGroup ?? ""}
-          options={groups}
-          onSelect={setSelectedGroup}
+          options={groups.map((g) => ({
+            label: g.label,
+            value: g.value,
+          }))}
+          onSelect={(label) => {
+            setSelectedGroup(label); 
+            // ⛔ YA NO TOCAR selectedCourse AQUÍ
+          }}
           icon={<Users className="w-4 h-4" />}
         />
 
+        {/* Filtro Curso */}
         <FilterSelect
           title="Curso"
-          value={selectedCourse ?? ""}
-          options={courses}
+          value={selectedCourse ?? "N/A"}
+          options={puedePasarLista ? courses : []}
           onSelect={setSelectedCourse}
           icon={<BookOpen className="w-4 h-4" />}
         />
       </div>
 
-      {/* ENCABEZADO */}
+      {/* Columna derecha */}
       <div className="flex-1 space-y-6">
+
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
 
+          {/* Info del curso */}
           <div>
             <h4 className="text-sm font-medium text-gray-900">
-              {selectedCourse}
+              {puedePasarLista && selectedCourse
+                ? selectedCourse
+                : "Grupo tutorado"}
             </h4>
+
             <p className="text-xs text-gray-500">
               Grupo {selectedGroup}
+              {!puedePasarLista && (
+                <span className="text-red-600 font-medium ml-1">
+                  (Tutorado — no puedes pasar lista)
+                </span>
+              )}
             </p>
           </div>
 
-          <div className="md:border-l md:border-gray-200 md:pl-4">
-            <h4 className="text-sm font-medium text-gray-900">
-              Hora - 10:00 AM a 10:45 AM
-            </h4>
-            <p className="text-xs text-gray-500">
-              Semana 3 - Martes 17 de enero 2020
-            </p>
-          </div>
+          {/* Hora */}
+          {puedePasarLista && (
+            <div className="md:border-l md:border-gray-200 md:pl-4">
+              <h4 className="text-sm font-medium text-gray-900">
+                Hora - 10:00 AM a 10:45 AM
+              </h4>
+              <p className="text-xs text-gray-500">
+                Semana 3 - Martes 17 de enero 2020
+              </p>
+            </div>
+          )}
 
-          <button className="bg-[#2B2B2B] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#3c3c3c] transition">
+          <button
+            disabled={!puedePasarLista}
+            className={`text-sm font-medium px-4 py-2 rounded-lg transition ${
+              puedePasarLista
+                ? "bg-[#2B2B2B] text-white hover:bg-[#3c3c3c]"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
             Pasar Asistencia
           </button>
 
