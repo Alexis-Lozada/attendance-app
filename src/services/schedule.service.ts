@@ -1,7 +1,6 @@
 import { attendanceApi } from "@/services/api";
 
 // === Interfaces ===
-
 export interface ScheduleResponse {
   idSchedule: number;
   dayOfWeek: string;
@@ -53,4 +52,23 @@ export async function createOrUpdateGroupSchedules(
 ): Promise<GroupCourseScheduleResponse[]> {
   const { data } = await attendanceApi.post("/schedules/group", payload);
   return data;
+}
+
+// === Obtener el horario más cercano o en curso ===
+export async function getClosestSchedule(
+  idGroupCourse: number,
+  dateTime: string
+): Promise<ScheduleResponse | null> {
+  try {
+    const { data } = await attendanceApi.get(`/schedules/closest`, {
+      params: { idGroupCourse, dateTime },
+    });
+    return data;
+  } catch (error: any) {
+    // Si el servidor responde con 204 No Content, devolvemos null
+    if (error.response && error.response.status === 204) {
+      return null;
+    }
+    throw error;
+  }
 }
