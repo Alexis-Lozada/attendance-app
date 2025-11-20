@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 interface Option {
   label: string;
   value: string;
+  esTutor?: boolean;
 }
 
 interface FilterSelectProps {
@@ -13,7 +14,7 @@ interface FilterSelectProps {
   value: string;
   options: Option[];
   onSelect: (value: string) => void;
-  icon?: React.ReactNode; // 🔥 NUEVO
+  icon?: React.ReactNode;
 }
 
 export default function FilterSelect({
@@ -44,15 +45,15 @@ export default function FilterSelect({
         onClick={() => setOpen(!open)}
         className="bg-white rounded-xl p-4 border border-gray-200 cursor-pointer"
       >
-        {/* 🔥 TÍTULO CON ICONO */}
+        {/* 🔥 TÍTULO CON ICONO (corregido color) */}
         <div className="flex items-center gap-2 mb-2">
-          {icon && <span className="text-gray-700">{icon}</span>}
+          {icon && <span className="text-gray-900">{icon}</span>}
           <h4 className="text-sm font-medium text-gray-900">{title}</h4>
         </div>
 
         {/* Valor + flecha */}
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">{value}</p>
+          <p className="text-sm text-gray-700">{value}</p>
           <ChevronDown
             className={`w-4 h-4 text-gray-500 transition-transform ${
               open ? "rotate-180" : ""
@@ -71,9 +72,16 @@ export default function FilterSelect({
                 onSelect(opt.label);
                 setOpen(false);
               }}
-              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+              className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
             >
-              {opt.label}
+              <span>{opt.label}</span>
+
+              {/* 🔥 BADGE TUTORADO (actualizado) */}
+              {opt.esTutor && (
+                <span className="bg-primary text-white px-2 py-1 rounded-sm font-medium text-xs">
+                  Grupo tutorado
+                </span>
+              )}
             </button>
           ))}
         </div>

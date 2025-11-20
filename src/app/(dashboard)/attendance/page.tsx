@@ -21,6 +21,7 @@ export default function AttendancePage() {
 
   const groupInfo = groups.find((g) => g.label === selectedGroup);
   const puedePasarLista = groupInfo?.puedePasarLista ?? false;
+  const esTutor = groupInfo?.esTutor ?? false;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -35,11 +36,9 @@ export default function AttendancePage() {
           options={groups.map((g) => ({
             label: g.label,
             value: g.value,
+            esTutor: g.esTutor, // 🔥
           }))}
-          onSelect={(label) => {
-            setSelectedGroup(label); 
-            // ⛔ YA NO TOCAR selectedCourse AQUÍ
-          }}
+          onSelect={setSelectedGroup}
           icon={<Users className="w-4 h-4" />}
         />
 
@@ -60,23 +59,24 @@ export default function AttendancePage() {
 
           {/* Info del curso */}
           <div>
-            <h4 className="text-sm font-medium text-gray-900">
-              {puedePasarLista && selectedCourse
-                ? selectedCourse
-                : "Grupo tutorado"}
+            <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2 mb-1">
+              {selectedGroup}
+
+              {/* 🔥 BADGE TUTORADO ARRIBA */}
+              {esTutor && (
+                <span className="bg-primary text-white px-2 py-0.5 rounded-sm font-medium text-xs">
+                  Grupo tutorado
+                </span>
+              )}
             </h4>
 
             <p className="text-xs text-gray-500">
-              Grupo {selectedGroup}
-              {!puedePasarLista && (
-                <span className="text-red-600 font-medium ml-1">
-                  (Tutorado — no puedes pasar lista)
-                </span>
-              )}
+              {puedePasarLista
+                ? `Curso: ${selectedCourse}`
+                : "No puedes pasar lista en este grupo"}
             </p>
           </div>
 
-          {/* Hora */}
           {puedePasarLista && (
             <div className="md:border-l md:border-gray-200 md:pl-4">
               <h4 className="text-sm font-medium text-gray-900">
@@ -90,15 +90,16 @@ export default function AttendancePage() {
 
           <button
             disabled={!puedePasarLista}
-            className={`text-sm font-medium px-4 py-2 rounded-lg transition ${
-              puedePasarLista
-                ? "bg-[#2B2B2B] text-white hover:bg-[#3c3c3c]"
+            className={`
+              text-sm font-medium rounded-md px-4 py-2 transition cursor-pointer
+              ${puedePasarLista
+                ? "bg-primary text-white hover:bg-primary/90"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
+              }
+            `}
           >
             Pasar Asistencia
           </button>
-
         </div>
       </div>
     </div>
