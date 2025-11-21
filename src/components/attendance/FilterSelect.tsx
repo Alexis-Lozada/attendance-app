@@ -7,6 +7,8 @@ interface Option {
   label: string;
   value: string;
   esTutor?: boolean;
+  subtitle?: string; // subtítulo opcional (ej: nombre del módulo)
+  [key: string]: any;
 }
 
 interface FilterSelectProps {
@@ -38,7 +40,6 @@ export default function FilterSelect({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // opción seleccionada: buscamos por value (id), y si no, por label (por compatibilidad)
   const selectedOption =
     options.find((o) => o.value === value) ||
     options.find((o) => o.label === value);
@@ -58,9 +59,18 @@ export default function FilterSelect({
 
         {/* Valor + flecha */}
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-700">
-            {selectedOption ? selectedOption.label : "Selecciona..."}
-          </p>
+          <div className="flex flex-col text-left">
+            <span className="text-sm text-gray-700">
+              {selectedOption ? selectedOption.label : "Selecciona..."}
+            </span>
+
+            {selectedOption?.subtitle && (
+              <span className="text-xs text-gray-500">
+                {selectedOption.subtitle}
+              </span>
+            )}
+          </div>
+
           <ChevronDown
             className={`w-4 h-4 text-gray-500 transition-transform ${
               open ? "rotate-180" : ""
@@ -76,15 +86,20 @@ export default function FilterSelect({
             <button
               key={opt.value}
               onClick={() => {
-                // 👇 MUY IMPORTANTE: mandamos el value (id), NO el label
                 onSelect(opt.value);
                 setOpen(false);
               }}
-              className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
+              className="w-full flex items-start justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
             >
-              <span>{opt.label}</span>
+              <div className="flex flex-col items-start text-left">
+                <span>{opt.label}</span>
+                {opt.subtitle && (
+                  <span className="text-xs text-gray-500">
+                    {opt.subtitle}
+                  </span>
+                )}
+              </div>
 
-              {/* Badge tutorado */}
               {opt.esTutor && (
                 <span className="bg-primary text-white px-2 py-1 rounded-sm font-medium text-xs">
                   Grupo tutorado

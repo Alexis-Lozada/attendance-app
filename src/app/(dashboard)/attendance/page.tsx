@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, BookOpen } from "lucide-react";
+import { Users, BookOpen, ListOrdered } from "lucide-react";
 import FilterSelect from "@/components/attendance/FilterSelect";
 import { useAttendanceFilters } from "@/hooks/attendance/useAttendanceFilters";
 import { useCourseSchedule } from "@/hooks/attendance/useCourseSchedule";
@@ -16,10 +16,13 @@ export default function AttendancePage() {
     error,
     groups,
     courses,
+    modules,
     selectedGroup,     // idGroup
     selectedCourse,    // idGroupCourse
+    selectedModule,    // idModule
     setSelectedGroup,
     setSelectedCourse,
+    setSelectedModule,
   } = useAttendanceFilters();
 
   const groupInfo = groups.find((g) => g.value === selectedGroup);
@@ -34,10 +37,6 @@ export default function AttendancePage() {
     selectedCourse
   );
 
-  // ✅ Solo se puede pasar lista si:
-  // - puedePasarLista (es profesor del grupo)
-  // - hay horario
-  // - y AHORA está dentro del rango de la clase
   const canMarkNow =
     !!schedule &&
     isNowWithinClass(
@@ -71,6 +70,15 @@ export default function AttendancePage() {
           options={puedePasarLista ? courses : []}
           onSelect={setSelectedCourse}
           icon={<BookOpen className="w-4 h-4" />}
+        />
+
+        {/* Filtro Modulo */}
+        <FilterSelect
+          title="Modulo"
+          value={selectedModule ?? ""} // idModule
+          options={modules}
+          onSelect={setSelectedModule}
+          icon={<ListOrdered className="w-4 h-4" />}
         />
       </div>
 
@@ -133,7 +141,11 @@ export default function AttendancePage() {
             disabled={!isButtonEnabled}
             className={`
               text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white
-              ${isButtonEnabled ? "hover:bg-primary/90 cursor-pointer" : "opacity-60 cursor-not-allowed"}
+              ${
+                isButtonEnabled
+                  ? "hover:bg-primary/90 cursor-pointer"
+                  : "opacity-60 cursor-not-allowed"
+              }
             `}
           >
             Pasar Asistencia

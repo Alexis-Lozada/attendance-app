@@ -10,13 +10,9 @@ import {
   getGroupCoursesByGroup,
 } from "@/services/groupCourse.service";
 
-import {
-  getEnrollmentsByStudent,
-} from "@/services/enrollment.service";
-
-import {
-  getGroupsByTutor,
-} from "@/services/group.service";
+import { getEnrollmentsByStudent } from "@/services/enrollment.service";
+import { getGroupsByTutor } from "@/services/group.service";
+import { getModulesByCourse } from "@/services/courseModule.service";
 
 interface GroupItem {
   label: string;   // código del grupo (ej: "TI-801")
@@ -25,18 +21,33 @@ interface GroupItem {
   esTutor: boolean;
 }
 
+interface CourseItem {
+  label: string;    // nombre del curso
+  value: string;    // idGroupCourse
+  idCourse: number; // idCourse real (para módulos)
+}
+
+interface ModuleOption {
+  label: string;      // "Modulo 1"
+  value: string;      // idModule
+  subtitle?: string;  // nombre del módulo
+}
+
 interface UseAttendanceFiltersResult {
   loading: boolean;
   error: string | null;
 
   groups: GroupItem[];
-  courses: { label: string; value: string }[];
+  courses: CourseItem[];
+  modules: ModuleOption[];
 
-  selectedGroup: string | null;   // idGroup
-  selectedCourse: string | null;  // idGroupCourse
+  selectedGroup: string | null;    // idGroup
+  selectedCourse: string | null;   // idGroupCourse
+  selectedModule: string | null;   // idModule
 
   setSelectedGroup: (g: string) => void;
   setSelectedCourse: (c: string | null) => void;
+  setSelectedModule: (m: string | null) => void;
 }
 
 export function useAttendanceFilters(): UseAttendanceFiltersResult {
@@ -46,10 +57,12 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
   const [error, setError] = useState<string | null>(null);
 
   const [groups, setGroups] = useState<GroupItem[]>([]);
-  const [courses, setCourses] = useState<{ label: string; value: string }[]>([]);
+  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [modules, setModules] = useState<ModuleOption[]>([]);
 
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);   // idGroup
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null); // idGroupCourse
+  const [selectedModule, setSelectedModule] = useState<string | null>(null); // idModule
 
   // ==============================
   //          LOAD DATA
@@ -84,9 +97,12 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     if (!selectedGroup) return;
 
     const loadCourses = async () => {
-      // 👇 ahora buscamos por value (idGroup), no por label
       const groupObj = groups.find((g) => g.value === selectedGroup);
       if (!groupObj) return;
+
+      // Reset módulos cuando cambie de grupo
+      setModules([]);
+      setSelectedModule(null);
 
       if (!groupObj.puedePasarLista) {
         setCourses([]);
@@ -96,10 +112,10 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
       const list = await getGroupCoursesByGroup(Number(groupObj.value));
 
-      // value = idGroupCourse (NO idCourse)
-      const options = list.map((c) => ({
+      const options: CourseItem[] = list.map((c) => ({
         label: c.courseName || "",
-        value: String(c.idGroupCourse),
+        value: String(c.idGroupCourse), // idGroupCourse
+        idCourse: c.idCourse,           // idCourse
       }));
 
       setCourses(options);
@@ -108,6 +124,39 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     loadCourses();
   }, [selectedGroup, groups]);
+
+  // ==============================
+  //   CURSO CAMBIADO → CARGAR MÓDULOS
+  // ==============================
+  useEffect(() => {
+    if (!selectedCourse) {
+      setModules([]);
+      setSelectedModule(null);
+      return;
+    }
+
+    const loadModules = async () => {
+      const course = courses.find((c) => c.value === selectedCourse);
+      if (!course) {
+        setModules([]);
+        setSelectedModule(null);
+        return;
+      }
+
+      const list = await getModulesByCourse(course.idCourse);
+
+      const options: ModuleOption[] = list.map((m) => ({
+        label: `Modulo ${m.moduleNumber}`, // 👈 solo "Modulo 1"
+        subtitle: m.title,                 // 👈 nombre del módulo en pequeño
+        value: String(m.idModule),
+      }));
+
+      setModules(options);
+      setSelectedModule(options[0]?.value || null);
+    };
+
+    loadModules();
+  }, [selectedCourse, courses]);
 
   // ==============================
   //            TEACHER
@@ -128,7 +177,6 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     const finalGroups = Array.from(map.values());
     setGroups(finalGroups);
-    // 👇 seleccionamos por value (idGroup)
     setSelectedGroup(finalGroups[0]?.value || null);
   };
 
@@ -154,8 +202,8 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     // grupos profesor
     profGroups.forEach((gc) => {
       map.set(gc.idGroup, {
-        label: gc.groupCode!,         // código
-        value: String(gc.idGroup),    // idGroup
+        label: gc.groupCode!,
+        value: String(gc.idGroup),
         puedePasarLista: true,
         esTutor: map.get(gc.idGroup)?.esTutor ?? false,
       });
@@ -163,7 +211,6 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     const finalGroups = Array.from(map.values());
     setGroups(finalGroups);
-    // 👇 otra vez: guardar idGroup
     setSelectedGroup(finalGroups[0]?.value || null);
   };
 
@@ -186,14 +233,15 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     setGroups([groupItem]);
 
-    const options = courses.map((c) => ({
+    const options: CourseItem[] = courses.map((c) => ({
       label: c.courseName || "",
       value: String(c.idGroupCourse),  // idGroupCourse
+      idCourse: c.idCourse,            // idCourse
     }));
 
     setCourses(options);
-    setSelectedGroup(String(active.idGroup));    // 👈 idGroup, NO el código
-    setSelectedCourse(options[0]?.value || null); // idGroupCourse
+    setSelectedGroup(String(active.idGroup));
+    setSelectedCourse(options[0]?.value || null);
   };
 
   return {
@@ -201,9 +249,12 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     error,
     groups,
     courses,
+    modules,
     selectedGroup,
     selectedCourse,
+    selectedModule,
     setSelectedGroup,
     setSelectedCourse,
+    setSelectedModule,
   };
 }
