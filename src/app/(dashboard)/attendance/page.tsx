@@ -9,6 +9,7 @@ import {
   formatClassDateEs,
   isNowWithinClass,
 } from "@/utils/attendance/DateUtils";
+import AttendanceTable from "@/components/attendance/AttendanceTable";
 
 export default function AttendancePage() {
   const {
@@ -17,9 +18,9 @@ export default function AttendancePage() {
     groups,
     courses,
     modules,
-    selectedGroup,     // idGroup
-    selectedCourse,    // idGroupCourse
-    selectedModule,    // idModule
+    selectedGroup,    // idGroup
+    selectedCourse,   // idGroupCourse
+    selectedModule,   // idModule
     setSelectedGroup,
     setSelectedCourse,
     setSelectedModule,
@@ -51,19 +52,18 @@ export default function AttendancePage() {
   if (error) return <p className="text-red-600">{error}</p>;
 
   return (
+    // 👇 ya SIN overflow-x-hidden
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Columna izquierda */}
+      {/* Columna izquierda: filtros */}
       <div className="space-y-6 min-w-[240px] flex-shrink-0 lg:w-1/4">
-        {/* Filtro Grupo */}
         <FilterSelect
           title="Grupo"
-          value={selectedGroup ?? ""}  // idGroup
+          value={selectedGroup ?? ""} // idGroup
           options={groups}
           onSelect={setSelectedGroup}
           icon={<Users className="w-4 h-4" />}
         />
 
-        {/* Filtro Curso */}
         <FilterSelect
           title="Curso"
           value={selectedCourse ?? ""} // idGroupCourse
@@ -72,7 +72,6 @@ export default function AttendancePage() {
           icon={<BookOpen className="w-4 h-4" />}
         />
 
-        {/* Filtro Modulo */}
         <FilterSelect
           title="Modulo"
           value={selectedModule ?? ""} // idModule
@@ -82,14 +81,13 @@ export default function AttendancePage() {
         />
       </div>
 
-      {/* Columna derecha */}
-      <div className="flex-1 space-y-6">
+      {/* Columna derecha: le damos min-w-0 para que pueda encogerse */}
+      <div className="flex-1 min-w-0 space-y-6">
+        {/* Tarjeta de grupo/curso/horario */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          {/* Info del curso / grupo */}
           <div>
             <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2 mb-1">
               {groupLabel}
-
               {esTutor && (
                 <span className="bg-primary text-white px-2 py-0.5 rounded-sm font-medium text-xs">
                   Grupo tutorado
@@ -106,20 +104,16 @@ export default function AttendancePage() {
             </p>
           </div>
 
-          {/* Horario real del backend */}
           {puedePasarLista && (
             <div className="md:border-l md:border-gray-200 md:pl-4">
               {loadingSchedule ? (
                 <p className="text-sm text-gray-700">Cargando horario...</p>
               ) : schedule ? (
                 <>
-                  {/* Hora - 10:00 AM a 10:45 AM */}
                   <h4 className="text-sm font-medium text-gray-900">
                     Hora - {formatTimeAMPM(schedule.startTime)} a{" "}
                     {formatTimeAMPM(schedule.endTime)}
                   </h4>
-
-                  {/* Ej: Martes 17 de enero 2020 */}
                   <p className="text-xs text-gray-500">
                     {formatClassDateEs(
                       schedule.dayOfWeek,
@@ -136,21 +130,20 @@ export default function AttendancePage() {
             </div>
           )}
 
-          {/* Botón */}
           <button
             disabled={!isButtonEnabled}
-            className={`
-              text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white
-              ${
-                isButtonEnabled
-                  ? "hover:bg-primary/90 cursor-pointer"
-                  : "opacity-60 cursor-not-allowed"
-              }
-            `}
+            className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
+              isButtonEnabled
+                ? "hover:bg-primary/90 cursor-pointer"
+                : "opacity-60 cursor-not-allowed"
+            }`}
           >
             Pasar Asistencia
           </button>
         </div>
+
+        {/* Tabla de asistencias */}
+        <AttendanceTable />
       </div>
     </div>
   );
