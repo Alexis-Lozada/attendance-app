@@ -8,22 +8,19 @@ import { useAuth } from "@/context/AuthContext";
 import {
   getGroupCoursesByProfessor,
   getGroupCoursesByGroup,
-  GroupCourseResponse
 } from "@/services/groupCourse.service";
 
 import {
   getEnrollmentsByStudent,
-  EnrollmentResponse
 } from "@/services/enrollment.service";
 
 import {
   getGroupsByTutor,
-  GroupResponse
 } from "@/services/group.service";
 
 interface GroupItem {
-  label: string;
-  value: string;
+  label: string;   // código del grupo (ej: "TI-801")
+  value: string;   // idGroup
   puedePasarLista: boolean;
   esTutor: boolean;
 }
@@ -35,8 +32,8 @@ interface UseAttendanceFiltersResult {
   groups: GroupItem[];
   courses: { label: string; value: string }[];
 
-  selectedGroup: string | null;
-  selectedCourse: string | null;
+  selectedGroup: string | null;   // idGroup
+  selectedCourse: string | null;  // idGroupCourse
 
   setSelectedGroup: (g: string) => void;
   setSelectedCourse: (c: string | null) => void;
@@ -51,8 +48,8 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [courses, setCourses] = useState<{ label: string; value: string }[]>([]);
 
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);   // idGroup
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null); // idGroupCourse
 
   // ==============================
   //          LOAD DATA
@@ -77,16 +74,18 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     };
 
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // ==============================
-  //     GRUPO CAMBIADO → CARGAR CURSOS
+  //   GRUPO CAMBIADO → CARGAR CURSOS
   // ==============================
   useEffect(() => {
     if (!selectedGroup) return;
 
     const loadCourses = async () => {
-      const groupObj = groups.find((g) => g.label === selectedGroup);
+      // 👇 ahora buscamos por value (idGroup), no por label
+      const groupObj = groups.find((g) => g.value === selectedGroup);
       if (!groupObj) return;
 
       if (!groupObj.puedePasarLista) {
@@ -96,13 +95,15 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
       }
 
       const list = await getGroupCoursesByGroup(Number(groupObj.value));
+
+      // value = idGroupCourse (NO idCourse)
       const options = list.map((c) => ({
         label: c.courseName || "",
-        value: String(c.idCourse)
+        value: String(c.idGroupCourse),
       }));
 
       setCourses(options);
-      setSelectedCourse(options[0]?.label || null);
+      setSelectedCourse(options[0]?.value || null); // idGroupCourse
     };
 
     loadCourses();
@@ -118,16 +119,17 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     list.forEach((gc) => {
       map.set(gc.groupCode!, {
-        label: gc.groupCode!,
-        value: String(gc.idGroup),
+        label: gc.groupCode!,          // código grupo
+        value: String(gc.idGroup),     // idGroup
         puedePasarLista: true,
-        esTutor: false
+        esTutor: false,
       });
     });
 
     const finalGroups = Array.from(map.values());
     setGroups(finalGroups);
-    setSelectedGroup(finalGroups[0]?.label || null);
+    // 👇 seleccionamos por value (idGroup)
+    setSelectedGroup(finalGroups[0]?.value || null);
   };
 
   // ==============================
@@ -142,26 +144,27 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     // grupos tutorados
     tutorGroups.forEach((g) => {
       map.set(g.idGroup, {
-        label: g.groupCode,
-        value: String(g.idGroup),
+        label: g.groupCode,           // código
+        value: String(g.idGroup),     // idGroup
         puedePasarLista: false,
-        esTutor: true
+        esTutor: true,
       });
     });
 
     // grupos profesor
     profGroups.forEach((gc) => {
       map.set(gc.idGroup, {
-        label: gc.groupCode!,
-        value: String(gc.idGroup),
+        label: gc.groupCode!,         // código
+        value: String(gc.idGroup),    // idGroup
         puedePasarLista: true,
-        esTutor: map.get(gc.idGroup)?.esTutor ?? false // si ya era tutor → conservarlo
+        esTutor: map.get(gc.idGroup)?.esTutor ?? false,
       });
     });
 
     const finalGroups = Array.from(map.values());
     setGroups(finalGroups);
-    setSelectedGroup(finalGroups[0]?.label || null);
+    // 👇 otra vez: guardar idGroup
+    setSelectedGroup(finalGroups[0]?.value || null);
   };
 
   // ==============================
@@ -175,22 +178,22 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     const courses = await getGroupCoursesByGroup(active.idGroup);
 
     const groupItem: GroupItem = {
-      label: active.groupCode,
-      value: String(active.idGroup),
+      label: active.groupCode,         // código grupo
+      value: String(active.idGroup),   // idGroup
       puedePasarLista: true,
-      esTutor: false
+      esTutor: false,
     };
 
     setGroups([groupItem]);
 
     const options = courses.map((c) => ({
       label: c.courseName || "",
-      value: String(c.idCourse)
+      value: String(c.idGroupCourse),  // idGroupCourse
     }));
 
     setCourses(options);
-    setSelectedGroup(active.groupCode);
-    setSelectedCourse(options[0]?.label || null);
+    setSelectedGroup(String(active.idGroup));    // 👈 idGroup, NO el código
+    setSelectedCourse(options[0]?.value || null); // idGroupCourse
   };
 
   return {
@@ -201,6 +204,6 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     selectedGroup,
     selectedCourse,
     setSelectedGroup,
-    setSelectedCourse
+    setSelectedCourse,
   };
 }

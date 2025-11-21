@@ -38,6 +38,11 @@ export default function FilterSelect({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // opción seleccionada: buscamos por value (id), y si no, por label (por compatibilidad)
+  const selectedOption =
+    options.find((o) => o.value === value) ||
+    options.find((o) => o.label === value);
+
   return (
     <div ref={ref} className="relative">
       {/* Card */}
@@ -45,7 +50,7 @@ export default function FilterSelect({
         onClick={() => setOpen(!open)}
         className="bg-white rounded-xl p-4 border border-gray-200 cursor-pointer"
       >
-        {/* 🔥 TÍTULO CON ICONO (corregido color) */}
+        {/* Título con icono */}
         <div className="flex items-center gap-2 mb-2">
           {icon && <span className="text-gray-900">{icon}</span>}
           <h4 className="text-sm font-medium text-gray-900">{title}</h4>
@@ -53,7 +58,9 @@ export default function FilterSelect({
 
         {/* Valor + flecha */}
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-700">{value}</p>
+          <p className="text-sm text-gray-700">
+            {selectedOption ? selectedOption.label : "Selecciona..."}
+          </p>
           <ChevronDown
             className={`w-4 h-4 text-gray-500 transition-transform ${
               open ? "rotate-180" : ""
@@ -69,14 +76,15 @@ export default function FilterSelect({
             <button
               key={opt.value}
               onClick={() => {
-                onSelect(opt.label);
+                // 👇 MUY IMPORTANTE: mandamos el value (id), NO el label
+                onSelect(opt.value);
                 setOpen(false);
               }}
               className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition"
             >
               <span>{opt.label}</span>
 
-              {/* 🔥 BADGE TUTORADO (actualizado) */}
+              {/* Badge tutorado */}
               {opt.esTutor && (
                 <span className="bg-primary text-white px-2 py-1 rounded-sm font-medium text-xs">
                   Grupo tutorado
