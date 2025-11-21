@@ -50,6 +50,18 @@ interface UseAttendanceFiltersResult {
   setSelectedModule: (m: string | null) => void;
 }
 
+// 🔧 helper para parsear "YYYY-MM-DD" a Date local (sin hora)
+function parseYMD(dateStr?: string | null): Date | null {
+  if (!dateStr) return null;
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]) - 1; // 0-based
+  const day = Number(parts[2]);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  return new Date(year, month, day);
+}
+
 export function useAttendanceFilters(): UseAttendanceFiltersResult {
   const { user } = useAuth();
 
@@ -145,14 +157,41 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
       const list = await getModulesByCourse(course.idCourse);
 
+      // Fecha de hoy (sin hora) en local
+      const now = new Date();
+      const today = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      );
+
+      // Buscar módulo cuyo rango de fechas incluya hoy
+      let defaultModuleId: string | null = null;
+
+      for (const m of list) {
+        const start = parseYMD(m.startDate);
+        const end = parseYMD(m.endDate);
+
+        // Si no tiene fechas, lo ignoramos para selección automática
+        if (!start || !end) continue;
+
+        if (start <= today && today <= end) {
+          defaultModuleId = String(m.idModule);
+          break; // tomamos el primero que cumpla
+        }
+      }
+
       const options: ModuleOption[] = list.map((m) => ({
-        label: `Modulo ${m.moduleNumber}`, // 👈 solo "Modulo 1"
-        subtitle: m.title,                 // 👈 nombre del módulo en pequeño
+        label: `Modulo ${m.moduleNumber}`, // solo "Modulo 1"
+        subtitle: m.title,                 // nombre del módulo en pequeño
         value: String(m.idModule),
       }));
 
       setModules(options);
-      setSelectedModule(options[0]?.value || null);
+
+      // Si hay módulo "actual", usarlo; si no, fallback al primero
+      const fallbackId = options[0]?.value || null;
+      setSelectedModule(defaultModuleId ?? fallbackId);
     };
 
     loadModules();
