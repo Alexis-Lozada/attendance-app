@@ -4,6 +4,11 @@ import { Users, BookOpen } from "lucide-react";
 import FilterSelect from "@/components/attendance/FilterSelect";
 import { useAttendanceFilters } from "@/hooks/attendance/useAttendanceFilters";
 import { useCourseSchedule } from "@/hooks/attendance/useCourseSchedule";
+import {
+  formatTimeAMPM,
+  formatClassDateEs,
+  isNowWithinClass,
+} from "@/utils/attendance/DateUtils";
 
 export default function AttendancePage() {
   const {
@@ -17,22 +22,32 @@ export default function AttendancePage() {
     setSelectedCourse,
   } = useAttendanceFilters();
 
-  // 🔁 SIEMPRE usar value (id) para buscar el grupo
   const groupInfo = groups.find((g) => g.value === selectedGroup);
   const puedePasarLista = groupInfo?.puedePasarLista ?? false;
   const esTutor = groupInfo?.esTutor ?? false;
   const groupLabel = groupInfo?.label ?? "Sin grupo";
 
-  // Info del curso seleccionado (para mostrar el nombre)
   const courseInfo = courses.find((c) => c.value === selectedCourse);
 
-  // Hook de horario, ahora recibe idGroupCourse
   const { schedule, loadingSchedule } = useCourseSchedule(
     puedePasarLista,
     selectedCourse
   );
 
-  // Returns condicionales DESPUÉS de todos los hooks
+  // ✅ Solo se puede pasar lista si:
+  // - puedePasarLista (es profesor del grupo)
+  // - hay horario
+  // - y AHORA está dentro del rango de la clase
+  const canMarkNow =
+    !!schedule &&
+    isNowWithinClass(
+      schedule.dayOfWeek,
+      schedule.startTime,
+      schedule.endTime
+    );
+
+  const isButtonEnabled = puedePasarLista && canMarkNow;
+
   if (loading) return <p className="text-gray-700">Cargando filtros...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
 
@@ -43,7 +58,7 @@ export default function AttendancePage() {
         {/* Filtro Grupo */}
         <FilterSelect
           title="Grupo"
-          value={selectedGroup ?? ""}   // idGroup
+          value={selectedGroup ?? ""}  // idGroup
           options={groups}
           onSelect={setSelectedGroup}
           icon={<Users className="w-4 h-4" />}
@@ -52,7 +67,7 @@ export default function AttendancePage() {
         {/* Filtro Curso */}
         <FilterSelect
           title="Curso"
-          value={selectedCourse ?? ""}  // idGroupCourse
+          value={selectedCourse ?? ""} // idGroupCourse
           options={puedePasarLista ? courses : []}
           onSelect={setSelectedCourse}
           icon={<BookOpen className="w-4 h-4" />}
@@ -90,11 +105,19 @@ export default function AttendancePage() {
                 <p className="text-sm text-gray-700">Cargando horario...</p>
               ) : schedule ? (
                 <>
+                  {/* Hora - 10:00 AM a 10:45 AM */}
                   <h4 className="text-sm font-medium text-gray-900">
-                    {schedule.startTime} a {schedule.endTime}
+                    Hora - {formatTimeAMPM(schedule.startTime)} a{" "}
+                    {formatTimeAMPM(schedule.endTime)}
                   </h4>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {schedule.dayOfWeek.toLowerCase()}
+
+                  {/* Ej: Martes 17 de enero 2020 */}
+                  <p className="text-xs text-gray-500">
+                    {formatClassDateEs(
+                      schedule.dayOfWeek,
+                      schedule.startTime,
+                      schedule.endTime
+                    )}
                   </p>
                 </>
               ) : (
@@ -107,14 +130,10 @@ export default function AttendancePage() {
 
           {/* Botón */}
           <button
-            disabled={!puedePasarLista}
+            disabled={!isButtonEnabled}
             className={`
-              text-sm font-medium rounded-md px-4 py-2 transition cursor-pointer
-              ${
-                puedePasarLista
-                  ? "bg-primary text-white hover:bg-primary/90"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }
+              text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white
+              ${isButtonEnabled ? "hover:bg-primary/90 cursor-pointer" : "opacity-60 cursor-not-allowed"}
             `}
           >
             Pasar Asistencia
