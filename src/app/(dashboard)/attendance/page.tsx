@@ -10,6 +10,7 @@ import {
   isNowWithinClass,
 } from "@/utils/attendance/DateUtils";
 import AttendanceTable from "@/components/attendance/AttendanceTable";
+import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
 
 export default function AttendancePage() {
   const {
@@ -18,9 +19,10 @@ export default function AttendancePage() {
     groups,
     courses,
     modules,
-    selectedGroup,    // idGroup
-    selectedCourse,   // idGroupCourse
-    selectedModule,   // idModule
+    modulesMeta,       // 👈 necesitas exponer esto desde el hook
+    selectedGroup,     // idGroup
+    selectedCourse,    // idGroupCourse
+    selectedModule,    // idModule
     setSelectedGroup,
     setSelectedCourse,
     setSelectedModule,
@@ -33,6 +35,14 @@ export default function AttendancePage() {
 
   const courseInfo = courses.find((c) => c.value === selectedCourse);
 
+  // Info del módulo seleccionado (para fechas)
+  const moduleInfo = modulesMeta.find(
+    (m) => String(m.idModule) === selectedModule
+  );
+  const moduleStartDate = moduleInfo?.startDate ?? null;
+  const moduleEndDate = moduleInfo?.endDate ?? null;
+
+  // Horario real del backend (para botón "Pasar Asistencia")
   const { schedule, loadingSchedule } = useCourseSchedule(
     puedePasarLista,
     selectedCourse
@@ -48,17 +58,29 @@ export default function AttendancePage() {
 
   const isButtonEnabled = puedePasarLista && canMarkNow;
 
+  // 🔥 Calendario dinámico para la tabla
+  const {
+    weeks,
+    monthLabel,
+    loadingCalendar,
+    calendarError,
+  } = useAttendanceCalendar({
+    idGroup: selectedGroup,
+    idGroupCourse: selectedCourse,
+    moduleStartDate,
+    moduleEndDate,
+  });
+
   if (loading) return <p className="text-gray-700">Cargando filtros...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
 
   return (
-    // 👇 ya SIN overflow-x-hidden
     <div className="flex flex-col lg:flex-row gap-6">
       {/* Columna izquierda: filtros */}
       <div className="space-y-6 min-w-[240px] flex-shrink-0 lg:w-1/4">
         <FilterSelect
           title="Grupo"
-          value={selectedGroup ?? ""} // idGroup
+          value={selectedGroup ?? ""}
           options={groups}
           onSelect={setSelectedGroup}
           icon={<Users className="w-4 h-4" />}
@@ -66,7 +88,7 @@ export default function AttendancePage() {
 
         <FilterSelect
           title="Curso"
-          value={selectedCourse ?? ""} // idGroupCourse
+          value={selectedCourse ?? ""}
           options={puedePasarLista ? courses : []}
           onSelect={setSelectedCourse}
           icon={<BookOpen className="w-4 h-4" />}
@@ -74,16 +96,16 @@ export default function AttendancePage() {
 
         <FilterSelect
           title="Modulo"
-          value={selectedModule ?? ""} // idModule
+          value={selectedModule ?? ""}
           options={modules}
           onSelect={setSelectedModule}
           icon={<ListOrdered className="w-4 h-4" />}
         />
       </div>
 
-      {/* Columna derecha: le damos min-w-0 para que pueda encogerse */}
+      {/* Columna derecha */}
       <div className="flex-1 min-w-0 space-y-6">
-        {/* Tarjeta de grupo/curso/horario */}
+        {/* Tarjeta de info */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2 mb-1">
@@ -102,6 +124,13 @@ export default function AttendancePage() {
                   : "Selecciona un curso"
                 : "No puedes pasar lista en este grupo"}
             </p>
+
+            {moduleInfo && (
+              <p className="text-xs text-gray-500 mt-1">
+                Módulo: {moduleInfo.title} — {moduleInfo.startDate} a{" "}
+                {moduleInfo.endDate}
+              </p>
+            )}
           </div>
 
           {puedePasarLista && (
@@ -142,8 +171,19 @@ export default function AttendancePage() {
           </button>
         </div>
 
+        {/* Mensajes de estado del calendario */}
+        {calendarError && (
+          <p className="text-xs text-red-500">{calendarError}</p>
+        )}
+
         {/* Tabla de asistencias */}
-        <AttendanceTable />
+        {loadingCalendar ? (
+          <p className="text-sm text-gray-700">
+            Generando calendario de asistencias...
+          </p>
+        ) : (
+          <AttendanceTable monthLabel={monthLabel} weeks={weeks} />
+        )}
       </div>
     </div>
   );

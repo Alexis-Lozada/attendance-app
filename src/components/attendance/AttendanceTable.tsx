@@ -1,21 +1,21 @@
 "use client";
 
 import { List, User } from "lucide-react";
+import type { AttendanceCalendarWeek } from "@/hooks/attendance/useAttendanceCalendar";
 
 interface AttendanceRow {
   id: number;
   studentName: string;
   enrollment: string;
   studentImage?: string;
-  // columnas de resumen
-  totalAttendance: number;     // ASISTENCIA
-  attendancePercent: number;   // % DE ASISTENCIA
-  absences: number;            // FALTAS
-  tardiness: number;           // TARDANZAS
-  justifications: number;      // JUSTIFICACIONES
+  totalAttendance: number;
+  attendancePercent: number;
+  absences: number;
+  tardiness: number;
+  justifications: number;
 }
 
-// Datos fake (3 alumnos)
+// Datos fake
 const MOCK_ATTENDANCE_DATA: AttendanceRow[] = [
   {
     id: 1,
@@ -49,53 +49,7 @@ const MOCK_ATTENDANCE_DATA: AttendanceRow[] = [
   },
 ];
 
-// Estructura tipo calendario (3 semanas)
-interface CalendarDay {
-  label: string; // L, M, M, J, V
-  dayNumber: number;
-}
-
-interface CalendarWeek {
-  label: string; // Semana 1, Semana 2...
-  days: CalendarDay[];
-}
-
-const MONTH_LABEL = "ENERO 2025";
-
-const CALENDAR_WEEKS: CalendarWeek[] = [
-  {
-    label: "Semana 1",
-    days: [
-      { label: "L", dayNumber: 6 },
-      { label: "M", dayNumber: 7 },
-      { label: "M", dayNumber: 8 },
-      { label: "J", dayNumber: 9 },
-      { label: "V", dayNumber: 10 },
-    ],
-  },
-  {
-    label: "Semana 2",
-    days: [
-      { label: "L", dayNumber: 13 },
-      { label: "M", dayNumber: 14 },
-      { label: "M", dayNumber: 15 },
-      { label: "J", dayNumber: 16 },
-      { label: "V", dayNumber: 17 },
-    ],
-  },
-  {
-    label: "Semana 3",
-    days: [
-      { label: "L", dayNumber: 20 },
-      { label: "M", dayNumber: 21 },
-      { label: "M", dayNumber: 22 },
-      { label: "J", dayNumber: 23 },
-      { label: "V", dayNumber: 24 },
-    ],
-  },
-];
-
-// Columnas de resumen (headers escritos de lado)
+// Columnas de resumen (headers verticales)
 const SUMMARY_COLUMNS = [
   { key: "totalAttendance", label: "ASISTENCIA" },
   { key: "attendancePercent", label: "% DE ASISTENCIA" },
@@ -104,11 +58,19 @@ const SUMMARY_COLUMNS = [
   { key: "justifications", label: "JUSTIFICACIONES" },
 ] as const;
 
-export default function AttendanceTable() {
+interface AttendanceTableProps {
+  monthLabel: string;
+  weeks: AttendanceCalendarWeek[];
+}
+
+export default function AttendanceTable({
+  monthLabel,
+  weeks,
+}: AttendanceTableProps) {
   const students = MOCK_ATTENDANCE_DATA;
   const totalStudents = students.length;
 
-  const totalDayColumns = CALENDAR_WEEKS.reduce(
+  const totalDayColumns = weeks.reduce(
     (acc, w) => acc + w.days.length,
     0
   );
@@ -126,20 +88,19 @@ export default function AttendanceTable() {
               Asistencias del grupo
             </h3>
             <p className="text-[12px] text-gray-500">
-              Vista tipo calendario para las sesiones del mes.
+              Vista tipo calendario para las sesiones del módulo.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Tabla con scroll horizontal */}
+      {/* Tabla con scroll horizontal propio */}
       {totalStudents > 0 ? (
         <div className="w-full max-w-full overflow-x-auto rounded-md border border-gray-200">
-          {/* aumentamos el ancho mínimo para que se note el scroll */}
           <div className="min-w-[900px]">
             <table className="w-full text-[13px] text-left text-gray-700">
               <thead>
-                {/* Fila 0: Mes + columnas de resumen laterales */}
+                {/* Fila 0: Mes + columnas de resumen */}
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-2 text-left text-[12px] font-medium text-gray-700 border-r border-gray-200 whitespace-nowrap">
                     Alumno
@@ -148,16 +109,15 @@ export default function AttendanceTable() {
                     className="px-5 py-2 text-center text-[12px] font-semibold text-gray-900"
                     colSpan={totalDayColumns}
                   >
-                    {MONTH_LABEL}
+                    {monthLabel || "CALENDARIO"}
                   </th>
 
-                  {SUMMARY_COLUMNS.map((col, idx) => (
+                  {SUMMARY_COLUMNS.map((col) => (
                     <th
                       key={col.key}
-                      rowSpan={4} // abarca todas las filas de encabezado
-                      className={`px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle`}
+                      rowSpan={4}
+                      className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
                     >
-                      {/* Texto vertical (escrito de lado) */}
                       <span className="inline-block [writing-mode:vertical-rl] rotate-180">
                         {col.label}
                       </span>
@@ -168,7 +128,7 @@ export default function AttendanceTable() {
                 {/* Fila 1: Semanas */}
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-2 text-left text-[12px] font-medium text-gray-700 border-r border-gray-200" />
-                  {CALENDAR_WEEKS.map((week, i) => (
+                  {weeks.map((week, i) => (
                     <th
                       key={`week-${i}`}
                       className="px-2 py-1 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200"
@@ -182,7 +142,7 @@ export default function AttendanceTable() {
                 {/* Fila 2: letras de día */}
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-1 text-left text-[12px] font-medium text-gray-700 border-r border-gray-200" />
-                  {CALENDAR_WEEKS.flatMap((week, wi) =>
+                  {weeks.flatMap((week, wi) =>
                     week.days.map((day, di) => (
                       <th
                         key={`weekday-${wi}-${di}`}
@@ -197,7 +157,7 @@ export default function AttendanceTable() {
                 {/* Fila 3: números de día */}
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-1 text-left text-[12px] font-medium text-gray-700 border-r border-gray-200" />
-                  {CALENDAR_WEEKS.flatMap((week, wi) =>
+                  {weeks.flatMap((week, wi) =>
                     week.days.map((day, di) => (
                       <th
                         key={`daynum-${wi}-${di}`}
@@ -241,8 +201,8 @@ export default function AttendanceTable() {
                       </div>
                     </td>
 
-                    {/* Celdas de días (placeholder) */}
-                    {CALENDAR_WEEKS.flatMap((week, wi) =>
+                    {/* Celdas de días (por ahora vacías) */}
+                    {weeks.flatMap((week, wi) =>
                       week.days.map((day, di) => (
                         <td
                           key={`cell-${row.id}-${wi}-${di}`}
@@ -253,7 +213,7 @@ export default function AttendanceTable() {
                       ))
                     )}
 
-                    {/* Columnas de resumen al final */}
+                    {/* Columnas de resumen */}
                     <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
                       {row.totalAttendance}
                     </td>

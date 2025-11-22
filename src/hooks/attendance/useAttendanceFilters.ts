@@ -8,11 +8,21 @@ import { useAuth } from "@/context/AuthContext";
 import {
   getGroupCoursesByProfessor,
   getGroupCoursesByGroup,
+  GroupCourseResponse,
 } from "@/services/groupCourse.service";
 
-import { getEnrollmentsByStudent } from "@/services/enrollment.service";
-import { getGroupsByTutor } from "@/services/group.service";
-import { getModulesByCourse } from "@/services/courseModule.service";
+import {
+  getEnrollmentsByStudent,
+} from "@/services/enrollment.service";
+
+import {
+  getGroupsByTutor,
+} from "@/services/group.service";
+
+import {
+  getModulesByCourse,
+  CourseModuleResponse,
+} from "@/services/courseModule.service";
 
 interface GroupItem {
   label: string;   // código del grupo (ej: "TI-801")
@@ -21,25 +31,16 @@ interface GroupItem {
   esTutor: boolean;
 }
 
-interface CourseItem {
-  label: string;    // nombre del curso
-  value: string;    // idGroupCourse
-  idCourse: number; // idCourse real (para módulos)
-}
-
-interface ModuleOption {
-  label: string;      // "Modulo 1"
-  value: string;      // idModule
-  subtitle?: string;  // nombre del módulo
-}
-
 interface UseAttendanceFiltersResult {
   loading: boolean;
   error: string | null;
 
   groups: GroupItem[];
-  courses: CourseItem[];
-  modules: ModuleOption[];
+  courses: { label: string; value: string }[];
+
+  // módulos para el selector
+  modules: { label: string; value: string; subtitle?: string }[];
+  modulesMeta: CourseModuleResponse[];
 
   selectedGroup: string | null;    // idGroup
   selectedCourse: string | null;   // idGroupCourse
@@ -50,18 +51,6 @@ interface UseAttendanceFiltersResult {
   setSelectedModule: (m: string | null) => void;
 }
 
-// 🔧 helper para parsear "YYYY-MM-DD" a Date local (sin hora)
-function parseYMD(dateStr?: string | null): Date | null {
-  if (!dateStr) return null;
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return null;
-  const year = Number(parts[0]);
-  const month = Number(parts[1]) - 1; // 0-based
-  const day = Number(parts[2]);
-  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-  return new Date(year, month, day);
-}
-
 export function useAttendanceFilters(): UseAttendanceFiltersResult {
   const { user } = useAuth();
 
@@ -69,12 +58,18 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
   const [error, setError] = useState<string | null>(null);
 
   const [groups, setGroups] = useState<GroupItem[]>([]);
-  const [courses, setCourses] = useState<CourseItem[]>([]);
-  const [modules, setModules] = useState<ModuleOption[]>([]);
+  const [courses, setCourses] = useState<{ label: string; value: string }[]>([]);
 
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);   // idGroup
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null); // idGroupCourse
-  const [selectedModule, setSelectedModule] = useState<string | null>(null); // idModule
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);    // idGroup
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);  // idGroupCourse
+  const [selectedModule, setSelectedModule] = useState<string | null>(null);  // idModule
+
+  // === Módulos ===
+  const [modules, setModules] = useState<{ label: string; value: string; subtitle?: string }[]>([]);
+  const [modulesMeta, setModulesMeta] = useState<CourseModuleResponse[]>([]);
+
+  // GroupCourses actuales del grupo seleccionado
+  const [currentGroupCourses, setCurrentGroupCourses] = useState<GroupCourseResponse[]>([]);
 
   // ==============================
   //          LOAD DATA
@@ -109,25 +104,30 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     if (!selectedGroup) return;
 
     const loadCourses = async () => {
+      // buscamos por value (idGroup)
       const groupObj = groups.find((g) => g.value === selectedGroup);
       if (!groupObj) return;
 
-      // Reset módulos cuando cambie de grupo
+      // reset de cursos y módulos al cambiar de grupo
+      setCourses([]);
+      setSelectedCourse(null);
       setModules([]);
+      setModulesMeta([]);
       setSelectedModule(null);
+      setCurrentGroupCourses([]);
 
       if (!groupObj.puedePasarLista) {
-        setCourses([]);
-        setSelectedCourse(null);
         return;
       }
 
       const list = await getGroupCoursesByGroup(Number(groupObj.value));
 
-      const options: CourseItem[] = list.map((c) => ({
+      setCurrentGroupCourses(list);
+
+      // value = idGroupCourse (NO idCourse)
+      const options = list.map((c) => ({
         label: c.courseName || "",
-        value: String(c.idGroupCourse), // idGroupCourse
-        idCourse: c.idCourse,           // idCourse
+        value: String(c.idGroupCourse),
       }));
 
       setCourses(options);
@@ -141,61 +141,59 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
   //   CURSO CAMBIADO → CARGAR MÓDULOS
   // ==============================
   useEffect(() => {
-    if (!selectedCourse) {
-      setModules([]);
-      setSelectedModule(null);
-      return;
-    }
+    // reset módulos al cambiar de curso
+    setModules([]);
+    setModulesMeta([]);
+    setSelectedModule(null);
+
+    if (!selectedCourse) return;
+
+    // buscar el GroupCourse para saber idCourse
+    const gc = currentGroupCourses.find(
+      (g) => g.idGroupCourse === Number(selectedCourse)
+    );
+    if (!gc) return;
 
     const loadModules = async () => {
-      const course = courses.find((c) => c.value === selectedCourse);
-      if (!course) {
-        setModules([]);
-        setSelectedModule(null);
+      const list = await getModulesByCourse(gc.idCourse);
+
+      setModulesMeta(list);
+
+      if (!list.length) {
         return;
       }
 
-      const list = await getModulesByCourse(course.idCourse);
-
-      // Fecha de hoy (sin hora) en local
-      const now = new Date();
-      const today = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-      );
-
-      // Buscar módulo cuyo rango de fechas incluya hoy
-      let defaultModuleId: string | null = null;
-
-      for (const m of list) {
-        const start = parseYMD(m.startDate);
-        const end = parseYMD(m.endDate);
-
-        // Si no tiene fechas, lo ignoramos para selección automática
-        if (!start || !end) continue;
-
-        if (start <= today && today <= end) {
-          defaultModuleId = String(m.idModule);
-          break; // tomamos el primero que cumpla
-        }
-      }
-
-      const options: ModuleOption[] = list.map((m) => ({
-        label: `Modulo ${m.moduleNumber}`, // solo "Modulo 1"
-        subtitle: m.title,                 // nombre del módulo en pequeño
+      const moduleOptions = list.map((m) => ({
+        label: `Módulo ${m.moduleNumber}`,
         value: String(m.idModule),
+        subtitle: m.title,
       }));
 
-      setModules(options);
+      setModules(moduleOptions);
 
-      // Si hay módulo "actual", usarlo; si no, fallback al primero
-      const fallbackId = options[0]?.value || null;
-      setSelectedModule(defaultModuleId ?? fallbackId);
+      // seleccionar automáticamente el módulo cuya fecha contenga "hoy" (si existe)
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+      const todayDate = new Date(todayStr + "T00:00:00");
+
+      let defaultModule: CourseModuleResponse | undefined = list.find((m) => {
+        if (!m.startDate || !m.endDate) return false;
+        const start = new Date(m.startDate + "T00:00:00");
+        const end = new Date(m.endDate + "T23:59:59");
+        return todayDate >= start && todayDate <= end;
+      });
+
+      if (!defaultModule) {
+        defaultModule = list[0];
+      }
+
+      if (defaultModule) {
+        setSelectedModule(String(defaultModule.idModule));
+      }
     };
 
     loadModules();
-  }, [selectedCourse, courses]);
+  }, [selectedCourse, currentGroupCourses]);
 
   // ==============================
   //            TEACHER
@@ -216,6 +214,7 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     const finalGroups = Array.from(map.values());
     setGroups(finalGroups);
+    // guardamos idGroup como seleccionado
     setSelectedGroup(finalGroups[0]?.value || null);
   };
 
@@ -241,8 +240,8 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     // grupos profesor
     profGroups.forEach((gc) => {
       map.set(gc.idGroup, {
-        label: gc.groupCode!,
-        value: String(gc.idGroup),
+        label: gc.groupCode!,         // código
+        value: String(gc.idGroup),    // idGroup
         puedePasarLista: true,
         esTutor: map.get(gc.idGroup)?.esTutor ?? false,
       });
@@ -250,7 +249,7 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     const finalGroups = Array.from(map.values());
     setGroups(finalGroups);
-    setSelectedGroup(finalGroups[0]?.value || null);
+    setSelectedGroup(finalGroups[0]?.value || null); // idGroup
   };
 
   // ==============================
@@ -272,15 +271,17 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
 
     setGroups([groupItem]);
 
-    const options: CourseItem[] = courses.map((c) => ({
+    const options = courses.map((c) => ({
       label: c.courseName || "",
       value: String(c.idGroupCourse),  // idGroupCourse
-      idCourse: c.idCourse,            // idCourse
     }));
 
     setCourses(options);
-    setSelectedGroup(String(active.idGroup));
-    setSelectedCourse(options[0]?.value || null);
+    setSelectedGroup(String(active.idGroup));       // idGroup
+    setSelectedCourse(options[0]?.value || null);   // idGroupCourse
+
+    // también cargamos currentGroupCourses para poder obtener idCourse
+    setCurrentGroupCourses(courses);
   };
 
   return {
@@ -289,6 +290,7 @@ export function useAttendanceFilters(): UseAttendanceFiltersResult {
     groups,
     courses,
     modules,
+    modulesMeta,
     selectedGroup,
     selectedCourse,
     selectedModule,
