@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { List, User } from "lucide-react";
 import { AttendanceResponse } from "@/services/attendance.service";
-import { getFileUrl } from "@/services/storage.service";
+import {
+  buildStudents,
+  buildAttendanceMap,
+  buildMonthSegments,
+  getStudentStatsForCalendar,
+  getCellLetterForCalendar,
+  type StudentInfo,
+} from "@/utils/attendance/AttendanceTableUtils";
+import { useStudentImageUrls } from "@/hooks/attendance/useStudentImageUrls";
 
 // === Tipos que vienen del hook useAttendanceCalendar ===
 interface CalendarDay {
@@ -18,7 +26,7 @@ interface CalendarWeek {
 }
 
 interface AttendanceTableProps {
-  monthLabel: string; // (no lo usamos visualmente por ahora)
+  monthLabel: string; // (ya no lo usamos directamente)
   weeks: CalendarWeek[];
   attendances: AttendanceResponse[];
 }
@@ -32,310 +40,43 @@ const SUMMARY_COLUMNS = [
   { key: "justifications", label: "JUSTIFICACIONES" },
 ] as const;
 
-// =====================
-//  Utilidades de fecha
-// =====================
-function toDateKey(dateStr: string): string {
-  // "2025-11-06T10:00:00" -> "2025-11-06"
-  return dateStr.split("T")[0];
-}
-
-function normalizeDateOnly(dateStr: string): Date {
-  const d = new Date(dateStr);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function isFutureDate(dateStr: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = normalizeDateOnly(dateStr);
-  return d > today;
-}
-
-// Normalizamos estatus para ser más tolerantes
-function normalizeStatus(
-  status?: string
-): "PRESENT" | "ABSENT" | "TARDY" | "JUSTIFIED" | "OTHER" {
-  if (!status) return "OTHER";
-  const s = status.toUpperCase().trim();
-
-  if (s === "PRESENT" || s === "P" || s === "ASISTENCIA") return "PRESENT";
-  if (s === "ABSENT" || s === "A" || s === "FALTA") return "ABSENT";
-  if (s === "TARDY" || s === "LATE" || s === "RETARDO" || s === "R")
-    return "TARDY";
-  if (s === "JUSTIFIED" || s === "JUSTIFICADO" || s === "J")
-    return "JUSTIFIED";
-
-  return "OTHER";
-}
-
 export default function AttendanceTable({
   monthLabel, // eslint-disable-line @typescript-eslint/no-unused-vars
   weeks,
   attendances,
 }: AttendanceTableProps) {
   // ==============================
-  //  Construir alumnos únicos (memoizado)
+  //  Alumnos únicos
   // ==============================
-  interface StudentInfo {
-    idStudent: number;
-    studentName: string;
-    enrollmentNumber: string;
-    profileImage?: string; // aquí viene UUID o URL
-  }
-
-  const students = useMemo<StudentInfo[]>(() => {
-    const map = new Map<number, StudentInfo>();
-
-    attendances.forEach((a) => {
-      if (!map.has(a.idStudent)) {
-        map.set(a.idStudent, {
-          idStudent: a.idStudent,
-          studentName: a.studentName || "Alumno sin nombre",
-          enrollmentNumber: a.enrollmentNumber || "",
-          profileImage: a.profileImage,
-        });
-      }
-    });
-
-    return Array.from(map.values()).sort((a, b) =>
-      a.studentName.localeCompare(b.studentName)
-    );
-  }, [attendances]);
+  const students: StudentInfo[] = useMemo(
+    () => buildStudents(attendances),
+    [attendances]
+  );
 
   const totalStudents = students.length;
 
   // ==============================
-  //  Mapa asistencia por alumno+fecha
+  //  Mapa alumno+fecha y días del calendario
   // ==============================
-  const attendanceByStudentAndDate = useMemo(() => {
-    const map = new Map<string, AttendanceResponse[]>();
+  const attendanceByStudentAndDate = useMemo(
+    () => buildAttendanceMap(attendances),
+    [attendances]
+  );
 
-    attendances.forEach((a) => {
-      const dateKey = toDateKey(a.attendanceDate); // "YYYY-MM-DD"
-      const key = `${a.idStudent}-${dateKey}`;
-      const current = map.get(key) || [];
-      current.push(a);
-      map.set(key, current);
-    });
-
-    return map;
-  }, [attendances]);
-
-  // Todas las fechas del calendario (para contar sesiones)
   const allCalendarDays = useMemo(
     () => weeks.flatMap((w) => w.days),
     [weeks]
   );
 
-  // ==============================
-  //  Segmentos por mes
-  // ==============================
-  const MONTHS_ES = [
-    "ENERO",
-    "FEBRERO",
-    "MARZO",
-    "ABRIL",
-    "MAYO",
-    "JUNIO",
-    "JULIO",
-    "AGOSTO",
-    "SEPTIEMBRE",
-    "OCTUBRE",
-    "NOVIEMBRE",
-    "DICIEMBRE",
-  ];
-
-  interface MonthSegment {
-    label: string;   // "NOVIEMBRE 2025"
-    colSpan: number; // cuántos días de ese mes
-  }
-
-  const monthSegments: MonthSegment[] = useMemo(() => {
-    const segments: MonthSegment[] = [];
-    allCalendarDays.forEach((day) => {
-      const d = new Date(day.date);
-      const label = `${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
-      const last = segments[segments.length - 1];
-
-      if (!last || last.label !== label) {
-        segments.push({ label, colSpan: 1 });
-      } else {
-        last.colSpan += 1;
-      }
-    });
-    return segments;
-  }, [allCalendarDays]);
-
-  const totalDayColumns = allCalendarDays.length;
+  const monthSegments = useMemo(
+    () => buildMonthSegments(allCalendarDays),
+    [allCalendarDays]
+  );
 
   // ==============================
-  //  Cálculo de resumen por alumno
+  //  Imágenes de alumnos (UUID → URL)
   // ==============================
-  function getStudentStats(idStudent: number) {
-    let totalSessions = 0; // todas las fechas del calendario (pasadas + futuras)
-    let realPresents = 0; // solo PRESENT de días pasados/actuales
-    let absences = 0; // faltas "puras"
-    let tardiness = 0; // total de retardos
-    let justifications = 0; // asistencias justificadas
-
-    allCalendarDays.forEach((day) => {
-      const dateKey = toDateKey(day.date);
-      const key = `${idStudent}-${dateKey}`;
-      const records = attendanceByStudentAndDate.get(key) || [];
-      totalSessions++;
-
-      const future = isFutureDate(day.date);
-
-      // 🔹 Fechas futuras: cuentan como presentes para el %,
-      // pero no afectan contadores visibles
-      if (future) {
-        return;
-      }
-
-      if (records.length === 0) {
-        // Día pasado sin registro → falta
-        absences++;
-        return;
-      }
-
-      let hasPresent = false;
-      let hasAbsent = false;
-      let hasJustified = false;
-      let tardiesForDay = 0;
-
-      records.forEach((r) => {
-        const st = normalizeStatus(r.status);
-
-        if (st === "PRESENT") {
-          hasPresent = true;
-        } else if (st === "ABSENT") {
-          hasAbsent = true;
-        } else if (st === "TARDY") {
-          tardiesForDay++;
-        } else if (st === "JUSTIFIED") {
-          hasJustified = true;
-        }
-      });
-
-      if (hasPresent) {
-        realPresents++;
-      } else if (hasJustified) {
-        justifications++;
-      } else if (hasAbsent) {
-        absences++;
-      }
-
-      tardiness += tardiesForDay;
-    });
-
-    // 3 retardos = 1 falta
-    const equivalentAbsencesFromTardies = Math.floor(tardiness / 3);
-    const effectiveAbsences = absences + equivalentAbsencesFromTardies;
-
-    let effectivePresents = totalSessions - effectiveAbsences;
-    if (effectivePresents < 0) effectivePresents = 0;
-
-    const attendancePercent =
-      totalSessions > 0
-        ? Math.round((effectivePresents / totalSessions) * 100)
-        : 0;
-
-    return {
-      totalAttendance: realPresents,
-      absences,
-      tardiness,
-      justifications,
-      attendancePercent,
-    };
-  }
-
-  // ==============================
-  //  Letra por celda (P/F/R/J)
-  // ==============================
-  function getCellLetter(idStudent: number, dateIso: string): string {
-    const dateKey = toDateKey(dateIso);
-    const key = `${idStudent}-${dateKey}`;
-    const records = attendanceByStudentAndDate.get(key) || [];
-
-    const future = isFutureDate(dateIso);
-
-    // 🔹 FUTURO sin registro → vacío (circulito)
-    if (future && records.length === 0) {
-      return "";
-    }
-
-    // 🔹 PASADO sin registro → F (falta)
-    if (!future && records.length === 0) {
-      return "F";
-    }
-
-    let hasPresent = false;
-    let hasAbsent = false;
-    let hasJustified = false;
-    let hasTardy = false;
-
-    records.forEach((r) => {
-      const st = normalizeStatus(r.status);
-      if (st === "PRESENT") hasPresent = true;
-      else if (st === "ABSENT") hasAbsent = true;
-      else if (st === "JUSTIFIED") hasJustified = true;
-      else if (st === "TARDY") hasTardy = true;
-    });
-
-    if (hasPresent) return "P";
-    if (hasJustified) return "J";
-    if (hasAbsent) return "F";
-    if (hasTardy) return "R";
-    return "";
-  }
-
-  // ==============================
-  //  Resolver imágenes (UUID → URL)
-  // ==============================
-  const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadImages() {
-      const newMap: Record<number, string> = {};
-
-      await Promise.all(
-        students.map(async (student) => {
-          const raw = student.profileImage;
-          if (!raw) return;
-
-          // Si ya viene como URL, úsala directo
-          if (raw.startsWith("http://") || raw.startsWith("https://")) {
-            newMap[student.idStudent] = raw;
-            return;
-          }
-
-          // Si parece UUID, pedimos al storage-ms
-          const url = await getFileUrl(raw);
-          if (url) {
-            newMap[student.idStudent] = url;
-          }
-        })
-      );
-
-      if (!cancelled) {
-        setImageUrls(newMap);
-      }
-    }
-
-    if (students.length > 0) {
-      loadImages();
-    } else {
-      setImageUrls({});
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [students]);
+  const imageUrls = useStudentImageUrls(students);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -438,7 +179,11 @@ export default function AttendanceTable({
 
               <tbody>
                 {students.map((student) => {
-                  const stats = getStudentStats(student.idStudent);
+                  const stats = getStudentStatsForCalendar(
+                    student.idStudent,
+                    allCalendarDays,
+                    attendanceByStudentAndDate
+                  );
                   const imgSrc = imageUrls[student.idStudent];
 
                   return (
@@ -471,12 +216,13 @@ export default function AttendanceTable({
                         </div>
                       </td>
 
-                      {/* Celdas de días: PRESENT = celda completa en bg-primary, resto letra/círculo */}
+                      {/* Celdas de días: PRESENT = celda completa en bg-primary */}
                       {weeks.flatMap((week, wi) =>
                         week.days.map((day, di) => {
-                          const letter = getCellLetter(
+                          const letter = getCellLetterForCalendar(
                             student.idStudent,
-                            day.date
+                            day.date,
+                            attendanceByStudentAndDate
                           );
                           const isPresent = letter === "P";
 
@@ -485,10 +231,7 @@ export default function AttendanceTable({
                           let cellContent: React.ReactNode = null;
 
                           if (isPresent) {
-                            // Celda llena de color primario, sin letra visible
                             cellClasses += " bg-primary text-white";
-                            // Opcional: accesibilidad
-                            // cellContent = <span className="sr-only">P</span>;
                           } else if (letter) {
                             cellClasses += " text-gray-700";
                             cellContent = (
@@ -497,7 +240,6 @@ export default function AttendanceTable({
                               </span>
                             );
                           } else {
-                            // Futuro sin registro → circulito vacío
                             cellContent = (
                               <span className="inline-block w-3 h-3 rounded-full border border-gray-200 bg-white" />
                             );
