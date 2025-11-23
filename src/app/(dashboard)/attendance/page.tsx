@@ -19,7 +19,7 @@ export default function AttendancePage() {
     groups,
     courses,
     modules,
-    modulesMeta,       // 👈 necesitas exponer esto desde el hook
+    modulesMeta,       // info completa de módulos
     selectedGroup,     // idGroup
     selectedCourse,    // idGroupCourse
     selectedModule,    // idModule
@@ -35,7 +35,7 @@ export default function AttendancePage() {
 
   const courseInfo = courses.find((c) => c.value === selectedCourse);
 
-  // Info del módulo seleccionado (para fechas)
+  // Info del módulo seleccionado (solo para fechas, ya no se muestra texto)
   const moduleInfo = modulesMeta.find(
     (m) => String(m.idModule) === selectedModule
   );
@@ -58,7 +58,7 @@ export default function AttendancePage() {
 
   const isButtonEnabled = puedePasarLista && canMarkNow;
 
-  // 🔥 Calendario dinámico para la tabla
+  // Calendario dinámico para la tabla
   const {
     weeks,
     monthLabel,
@@ -124,13 +124,6 @@ export default function AttendancePage() {
                   : "Selecciona un curso"
                 : "No puedes pasar lista en este grupo"}
             </p>
-
-            {moduleInfo && (
-              <p className="text-xs text-gray-500 mt-1">
-                Módulo: {moduleInfo.title} — {moduleInfo.startDate} a{" "}
-                {moduleInfo.endDate}
-              </p>
-            )}
           </div>
 
           {puedePasarLista && (
