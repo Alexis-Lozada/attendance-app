@@ -6,6 +6,8 @@ import SearchInput from "@/components/ui/SearchInput";
 import { useAuth } from "@/context/AuthContext";
 import AdminMenu from "@/components/sidebar/AdminMenu";
 import NavItem from "@/components/sidebar/NavItem";
+import UniversityInfo from "@/components/sidebar/UniversityInfo";
+import ProfileInfo from "@/components/sidebar/ProfileInfo";
 import { RoleLabels, UserRole } from "@/types/roles";
 
 export default function Sidebar() {
@@ -20,26 +22,16 @@ export default function Sidebar() {
       <div>
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 py-5">
-          <div className="bg-black text-white w-8 h-8 flex items-center justify-center rounded-md font-bold">R</div>
+          <img
+            src="/logo.svg"
+            alt="Roster Logo"
+            className="w-8 h-8 rounded-md object-contain"
+          />
           <span className="font-medium text-lg text-gray-900">Roster</span>
         </div>
 
         {/* Institución académica */}
-        <div
-          className="mx-4 mb-3 rounded-lg px-3 py-3 flex items-center gap-3"
-          style={{ backgroundColor: "#FDFDFD", border: "1px solid #F0F0F0" }}
-        >
-          <img src="/images/uteq-logo.png" alt="UTEQ" className="w-8 h-8 rounded-md object-contain" />
-          <div className="flex flex-col min-w-0">
-            <span
-              className="text-sm font-medium text-gray-900 truncate whitespace-nowrap"
-              title="Universidad Autónoma de Querétaro"
-            >
-              Universidad Autónoma de Querétaro
-            </span>
-            <span className="text-xs text-gray-500">UTEQ</span>
-          </div>
-        </div>
+        <UniversityInfo />
 
         {/* Buscador */}
         <div className="px-4 py-3">
@@ -55,7 +47,7 @@ export default function Sidebar() {
 
         <nav className="space-y-1 text-sm">
           <NavItem href="/dashboard" icon={<LayoutDashboard size={18} />} label="Dashboard" withConnector={false} />
-          <AdminMenu className="" />
+          {(user?.role === "ADMIN" || user?.role === "COORDINATOR") && <AdminMenu className="" />}
           <NavItem href="/attendance" icon={<Clock size={18} />} label="Asistencia" withConnector={false} />
           <NavItem href="/schedule" icon={<Calendar size={18} />} label="Horario" withConnector={false} />
           <NavItem href="/courses" icon={<BookOpen size={18} />} label="Cursos" withConnector={false} />
@@ -78,18 +70,7 @@ export default function Sidebar() {
       </div>
 
       {/* Parte inferior fija (usuario) */}
-      <Link
-        href="/profile"
-        className="px-4 py-3 flex items-center gap-3 border-t border-gray-100 cursor-pointer"
-      >
-        <img src="/images/user.jpg" alt="User" className="w-10 h-10 rounded-md" />
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {user ? `${user.firstName} ${user.lastName}` : "Invitado"}
-          </p>
-          <p className="text-xs text-gray-500">{roleLabel}</p>
-        </div>
-      </Link>
+      <ProfileInfo />
     </aside>
   );
 }

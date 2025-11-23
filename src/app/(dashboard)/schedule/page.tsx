@@ -4,10 +4,8 @@ import { useState, useEffect } from "react";
 import { 
   Calendar, 
   Clock,
-  MapPin,
   Users,
   GripVertical,
-  Trash2,
   Save,
   BookOpen,
   Download
@@ -15,12 +13,19 @@ import {
 
 import Toast from "@/components/ui/Toast";
 import Spinner from "@/components/ui/Spinner";
-import { DAYS_OF_WEEK } from "@/types/schedule";
+import ScheduleTable from "@/components/schedules/ScheduleTable";
+import { useScheduleTable } from "@/hooks/useScheduleTable";
+import { useAuth } from "@/context/AuthContext";
+import { getGroupsByDivision } from "@/services/group.service";
+import { getCoursesByDivision } from "@/services/course.service";
+import { getUsersByUniversity } from "@/services/user.service";
+import { getSchedulesByGroup, createOrUpdateGroupSchedules } from "@/services/schedule.service";
 import type { 
   GroupCourse,
   Classroom 
 } from "@/types/schedule";
 import type { GroupWithDetails } from "@/types/group";
+import type { User } from "@/types/user";
 
 // Mock data
 const MOCK_CLASSROOMS: Classroom[] = [
@@ -30,361 +35,235 @@ const MOCK_CLASSROOMS: Classroom[] = [
   { idClassroom: 4, roomCode: "C301", roomName: "Auditorio", location: "Edificio C", status: true },
 ];
 
-const MOCK_GROUP_COURSES: GroupCourse[] = [
-  { 
-    idGroupCourse: 1, 
-    idGroup: 1, 
-    idCourse: 1, 
-    idProfessor: 1, 
-    groupCode: "IDGS10-A", 
-    courseCode: "BD101", 
-    courseName: "Bases de Datos", 
-    professorName: "Dr. Juan Pérez", 
-    semester: "10", 
-    programName: "Ing. Desarrollo Software" 
-  },
-  { 
-    idGroupCourse: 2, 
-    idGroup: 1, 
-    idCourse: 2, 
-    idProfessor: 2, 
-    groupCode: "IDGS10-A", 
-    courseCode: "WEB201", 
-    courseName: "Desarrollo Web", 
-    professorName: "Ing. María García", 
-    semester: "10", 
-    programName: "Ing. Desarrollo Software" 
-  },
-  { 
-    idGroupCourse: 3, 
-    idGroup: 1, 
-    idCourse: 3, 
-    idProfessor: 3, 
-    groupCode: "IDGS10-A", 
-    courseCode: "ALG301", 
-    courseName: "Algoritmos Avanzados", 
-    professorName: "Mtro. Carlos López", 
-    semester: "10", 
-    programName: "Ing. Desarrollo Software" 
-  },
-  { 
-    idGroupCourse: 4, 
-    idGroup: 2, 
-    idCourse: 4, 
-    idProfessor: 1, 
-    groupCode: "ISC08-B", 
-    courseCode: "CALC201", 
-    courseName: "Cálculo Diferencial", 
-    professorName: "Dr. Ana Martínez", 
-    semester: "8", 
-    programName: "Ing. Sistemas Computacionales" 
-  },
-  { 
-    idGroupCourse: 5, 
-    idGroup: 2, 
-    idCourse: 5, 
-    idProfessor: 2, 
-    groupCode: "ISC08-B", 
-    courseCode: "PROG101", 
-    courseName: "Programación Estructurada", 
-    professorName: "Ing. Pedro Sánchez", 
-    semester: "8", 
-    programName: "Ing. Sistemas Computacionales" 
-  },
-];
-
-const MOCK_GROUPS: GroupWithDetails[] = [
-  { 
-    idGroup: 1, 
-    idProgram: 1, 
-    idTutor: 1, 
-    groupCode: "IDGS10-A", 
-    semester: "10", 
-    academicYear: "2024-2025", 
-    enrollmentCount: 25, 
-    status: true, 
-    programName: "Ingeniería en Desarrollo de Software", 
-    programCode: "IDGS" 
-  },
-  { 
-    idGroup: 2, 
-    idProgram: 2, 
-    idTutor: 2, 
-    groupCode: "ISC08-B", 
-    semester: "8", 
-    academicYear: "2024-2025", 
-    enrollmentCount: 30, 
-    status: true, 
-    programName: "Ingeniería en Sistemas Computacionales", 
-    programCode: "ISC" 
-  },
-];
-
 const TIME_SLOTS = [
   "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
   "19:00", "20:00", "21:00"
 ];
 
-// Only Monday to Friday
-const WEEK_DAYS = DAYS_OF_WEEK.filter(day => 
-  day.value !== "SATURDAY"
-);
-
-interface ScheduleBlock {
-  id: string;
-  idGroupCourse: number;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-  idClassroom: number;
-  courseCode?: string;
-  courseName?: string;
-  professorName?: string;
-  classroomCode?: string;
-}
-
 export default function ScheduleBuilderPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [groups, setGroups] = useState<GroupWithDetails[]>([]);
   const [groupCourses, setGroupCourses] = useState<GroupCourse[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
-  const [draggedCourse, setDraggedCourse] = useState<GroupCourse | null>(null);
-  const [draggedBlock, setDraggedBlock] = useState<ScheduleBlock | null>(null);
-  const [dropSuccessful, setDropSuccessful] = useState(false);
-  const [startTime, setStartTime] = useState("07:00");
-  const [endTime, setEndTime] = useState("21:00");
+  const [professors, setProfessors] = useState<User[]>([]);
+  const [initialScheduleBlocks, setInitialScheduleBlocks] = useState<any[]>([]);
+  const [startTime, setStartTime] = useState("08:00");
+  const [endTime, setEndTime] = useState("13:00");
   const [toast, setToast] = useState<{
     title: string;
     description?: string;
     type: "success" | "error";
   } | null>(null);
 
+  const {
+    scheduleBlocks,
+    draggedCourse,
+    editingBlockId,
+    newBlockPending,
+    handleDragStart,
+    handleBlockDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDrop,
+    handleStartEdit,
+    handleSaveEdit,
+    handleCancelEdit,
+    handleClickOutside,
+    calculateDurationHours,
+  } = useScheduleTable({ 
+    classrooms,
+    professors,
+    initialBlocks: initialScheduleBlocks,
+    onToast: setToast 
+  });
+
   useEffect(() => {
     const loadData = async () => {
+      if (!user?.idDivision || !user?.idUniversity) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
       
-      setGroups(MOCK_GROUPS);
-      setGroupCourses(MOCK_GROUP_COURSES);
-      setClassrooms(MOCK_CLASSROOMS);
-      setLoading(false);
+      try {
+        // Cargar grupos activos de la división del usuario
+        const activeGroups = await getGroupsByDivision(user.idDivision, true);
+        
+        // Cargar cursos activos de la división del usuario
+        const activeCourses = await getCoursesByDivision(user.idDivision, true);
+        
+        // Cargar profesores activos de la universidad
+        const allUsers = await getUsersByUniversity(user.idUniversity, true);
+        const teachersAndTutors = allUsers.filter(u => 
+          u.role === "TEACHER" || u.role === "TUTOR"
+        );
+        
+        // Convertir GroupResponse a GroupWithDetails
+        const groupsWithDetails: GroupWithDetails[] = activeGroups.map(g => ({
+          idGroup: g.idGroup,
+          idProgram: g.idProgram,
+          idTutor: g.idTutor,
+          groupCode: g.groupCode,
+          semester: g.semester,
+          academicYear: g.academicYear,
+          enrollmentCount: g.enrollmentCount,
+          status: g.status,
+          programName: g.programName,
+          programCode: "", // Este campo no viene en GroupResponse
+        }));
+
+        // Convertir CourseResponse a GroupCourse (temporal para compatibilidad)
+        const coursesAsGroupCourses: GroupCourse[] = activeCourses.map(c => ({
+          idGroupCourse: c.idCourse, // Temporal, se generará al crear el horario
+          idGroup: 0, // No está asignado a un grupo aún
+          idCourse: c.idCourse,
+          idProfessor: 0, // Se asignará al arrastrar al horario
+          groupCode: "", // Se asignará al arrastrar al horario
+          courseCode: c.courseCode,
+          courseName: c.courseName,
+          professorName: "Sin asignar", // Se asignará al arrastrar al horario
+          semester: c.semester || "",
+          programName: c.divisionName || "",
+        }));
+
+        setGroups(groupsWithDetails);
+        setGroupCourses(coursesAsGroupCourses);
+        setProfessors(teachersAndTutors);
+        setClassrooms(MOCK_CLASSROOMS);
+      } catch (error: any) {
+        console.error("Error loading data:", error);
+        setToast({
+          title: "Error al cargar datos",
+          description: error?.message || "No se pudieron cargar los grupos y cursos de la división",
+          type: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+  }, [user?.idDivision, user?.idUniversity]);
+
+  // Cargar horarios cuando se selecciona un grupo
+  useEffect(() => {
+    const loadGroupSchedules = async () => {
+      if (!selectedGroup) {
+        setInitialScheduleBlocks([]);
+        // Restablecer al rango por defecto cuando no hay grupo seleccionado
+        setStartTime("08:00");
+        setEndTime("13:00");
+        return;
+      }
+
+      setLoadingSchedules(true);
+      
+      try {
+        const groupSchedules = await getSchedulesByGroup(selectedGroup);
+        
+        // Convertir el response a ScheduleBlocks
+        const blocks: any[] = [];
+        
+        groupSchedules.forEach((groupCourse) => {
+          const course = groupCourses.find(c => c.idCourse === groupCourse.idCourse);
+          const professor = professors.find(p => p.idUser === groupCourse.idProfessor);
+          
+          groupCourse.schedules.forEach((schedule) => {
+            // Si el backend ya devuelve en inglés, usar directamente
+            // Si aún devuelve en español (legacy), convertir
+            const dayMap: Record<string, string> = {
+              "Lunes": "MONDAY",
+              "Martes": "TUESDAY",
+              "Miércoles": "WEDNESDAY",
+              "Miercoles": "WEDNESDAY",
+              "Jueves": "THURSDAY",
+              "Viernes": "FRIDAY",
+              "Sábado": "SATURDAY",
+              "Sabado": "SATURDAY",
+            };
+            
+            // Si viene en inglés mayúsculas, usar tal cual, si no, mapear
+            const dayOfWeek = schedule.dayOfWeek.toUpperCase() === schedule.dayOfWeek
+              ? schedule.dayOfWeek
+              : (dayMap[schedule.dayOfWeek] || schedule.dayOfWeek);
+            
+            blocks.push({
+              id: `schedule-${schedule.idSchedule}`,
+              idGroupCourse: groupCourse.idGroupCourse,
+              idCourse: groupCourse.idCourse,
+              dayOfWeek: dayOfWeek,
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              idClassroom: 0, // No tenemos el ID del aula en el response
+              idProfessor: groupCourse.idProfessor,
+              courseCode: course?.courseCode || "",
+              courseName: course?.courseName || "",
+              professorName: professor ? `${professor.firstName} ${professor.lastName}` : "",
+              classroomCode: schedule.classroom,
+            });
+          });
+        });
+        
+        setInitialScheduleBlocks(blocks);
+        
+        // Ajustar el rango de horas según los horarios cargados
+        if (blocks.length > 0) {
+          // Encontrar la hora más temprana de inicio y la hora más tardía de inicio
+          let earliestStartTime = "23:59";
+          let latestStartTime = "00:00";
+          
+          blocks.forEach(block => {
+            if (block.startTime < earliestStartTime) {
+              earliestStartTime = block.startTime;
+            }
+            if (block.startTime > latestStartTime) {
+              latestStartTime = block.startTime;
+            }
+          });
+          
+          // Usar las horas de inicio como rango
+          setStartTime(earliestStartTime);
+          setEndTime(latestStartTime);
+        } else {
+          // Si no hay horarios, usar el rango por defecto 08:00 - 13:00
+          setStartTime("08:00");
+          setEndTime("13:00");
+        }
+      } catch (error: any) {
+        console.error("Error loading group schedules:", error);
+        setToast({
+          title: "Error al cargar horarios",
+          description: error?.message || "No se pudieron cargar los horarios del grupo",
+          type: "error",
+        });
+        setInitialScheduleBlocks([]);
+      } finally {
+        setLoadingSchedules(false);
+      }
+    };
+
+    loadGroupSchedules();
+  }, [selectedGroup, groupCourses, professors]);
 
   const availableCourses = selectedGroup 
-    ? groupCourses.filter(gc => gc.idGroup === selectedGroup)
+    ? groupCourses // Mostrar todos los cursos de la división cuando hay un grupo seleccionado
     : [];
 
-  const handleDragStart = (e: React.DragEvent, course: GroupCourse) => {
-    setDraggedCourse(course);
-    setDraggedBlock(null);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleBlockDragStart = (e: React.DragEvent, block: ScheduleBlock) => {
-    setDraggedBlock(block);
-    setDraggedCourse(null);
-    e.dataTransfer.effectAllowed = 'move';
-    
-    // Add visual feedback
-    const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '0.5';
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    target.style.opacity = '1';
-    
-    // If a block was being dragged and drop was not successful, delete it
-    if (draggedBlock && !dropSuccessful) {
-      setScheduleBlocks(prev => prev.filter(b => b.id !== draggedBlock.id));
+  const saveSchedule = async () => {
+    if (!selectedGroup) {
       setToast({
-        title: "Clase eliminada",
-        description: "El curso fue removido del horario",
-        type: "success",
-      });
-    }
-    
-    setDraggedBlock(null);
-    setDraggedCourse(null);
-    setDropSuccessful(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, day: string, time: string) => {
-    e.preventDefault();
-    
-    // Handle moving an existing block
-    if (draggedBlock) {
-      // Calculate duration of the block
-      const startIdx = TIME_SLOTS.indexOf(draggedBlock.startTime);
-      const endIdx = TIME_SLOTS.indexOf(draggedBlock.endTime);
-      const duration = endIdx - startIdx;
-      
-      const newEndTime = calculateEndTime(time, duration);
-
-      // Check for conflicts (excluding the block being moved)
-      const hasConflict = scheduleBlocks.some(block => {
-        if (block.id === draggedBlock.id || block.dayOfWeek !== day) return false;
-        
-        return (
-          (time >= block.startTime && time < block.endTime) ||
-          (newEndTime > block.startTime && newEndTime <= block.endTime) ||
-          (time <= block.startTime && newEndTime >= block.endTime)
-        );
-      });
-
-      if (hasConflict) {
-        setToast({
-          title: "Conflicto de horario",
-          description: "Ya existe otra clase en este horario",
-          type: "error",
-        });
-        setDraggedBlock(null);
-        return;
-      }
-
-      // Move the block
-      setScheduleBlocks(prev => prev.map(b => 
-        b.id === draggedBlock.id 
-          ? { ...b, dayOfWeek: day, startTime: time, endTime: newEndTime }
-          : b
-      ));
-
-      setDropSuccessful(true);
-      setDraggedBlock(null);
-      setToast({
-        title: "Clase movida",
-        description: `${draggedBlock.courseCode} movido exitosamente`,
-        type: "success",
-      });
-      return;
-    }
-
-    // Handle dropping a new course from sidebar
-    if (!draggedCourse) return;
-
-    // Check if there's an adjacent block of the same course that we can extend
-    const adjacentBlock = scheduleBlocks.find(block => 
-      block.dayOfWeek === day &&
-      block.idGroupCourse === draggedCourse.idGroupCourse &&
-      (block.endTime === time || block.startTime === calculateEndTime(time, 1))
-    );
-
-    if (adjacentBlock) {
-      // Extend the existing block
-      const newStartTime = adjacentBlock.startTime < time ? adjacentBlock.startTime : time;
-      const newEndTime = adjacentBlock.endTime > calculateEndTime(time, 1) ? adjacentBlock.endTime : calculateEndTime(time, 1);
-
-      // Check if extension would conflict with other blocks
-      const hasConflict = scheduleBlocks.some(block => {
-        if (block.id === adjacentBlock.id || block.dayOfWeek !== day) return false;
-        
-        return (
-          (newStartTime >= block.startTime && newStartTime < block.endTime) ||
-          (newEndTime > block.startTime && newEndTime <= block.endTime) ||
-          (newStartTime <= block.startTime && newEndTime >= block.endTime)
-        );
-      });
-
-      if (hasConflict) {
-        setToast({
-          title: "Conflicto de horario",
-          description: "No se puede extender, hay otra clase en el camino",
-          type: "error",
-        });
-        return;
-      }
-
-      // Update the block
-      setScheduleBlocks(prev => prev.map(b => 
-        b.id === adjacentBlock.id 
-          ? { ...b, startTime: newStartTime, endTime: newEndTime }
-          : b
-      ));
-
-      setDraggedCourse(null);
-      setToast({
-        title: "Clase extendida",
-        description: `${draggedCourse.courseCode} ahora ocupa ${calculateDurationHours(newStartTime, newEndTime)}h`,
-        type: "success",
-      });
-      return;
-    }
-
-    // No adjacent block, create new block
-    const endTime = calculateEndTime(time, 1);
-
-    const hasConflict = scheduleBlocks.some(block => {
-      if (block.dayOfWeek !== day) return false;
-      
-      return (
-        (time >= block.startTime && time < block.endTime) ||
-        (endTime > block.startTime && endTime <= block.endTime) ||
-        (time <= block.startTime && endTime >= block.endTime)
-      );
-    });
-
-    if (hasConflict) {
-      setToast({
-        title: "Conflicto de horario",
-        description: "Ya existe una clase en este horario",
+        title: "Grupo no seleccionado",
+        description: "Selecciona un grupo antes de guardar",
         type: "error",
       });
       return;
     }
 
-    const newBlock: ScheduleBlock = {
-      id: `${Date.now()}-${Math.random()}`,
-      idGroupCourse: draggedCourse.idGroupCourse,
-      dayOfWeek: day,
-      startTime: time,
-      endTime: endTime,
-      idClassroom: classrooms[0]?.idClassroom || 1,
-      courseCode: draggedCourse.courseCode,
-      courseName: draggedCourse.courseName,
-      professorName: draggedCourse.professorName,
-      classroomCode: classrooms[0]?.roomCode,
-    };
-
-    setScheduleBlocks(prev => [...prev, newBlock]);
-    setDraggedCourse(null);
-
-    setToast({
-      title: "Clase agregada",
-      description: `${draggedCourse.courseCode} añadido al horario`,
-      type: "success",
-    });
-  };
-
-  const removeBlock = (blockId: string) => {
-    setScheduleBlocks(prev => prev.filter(b => b.id !== blockId));
-    setToast({
-      title: "Clase eliminada",
-      description: "La clase fue removida del horario",
-      type: "success",
-    });
-  };
-
-  const updateBlockClassroom = (blockId: string, classroomId: number) => {
-    const classroom = classrooms.find(c => c.idClassroom === classroomId);
-    setScheduleBlocks(prev => prev.map(b => 
-      b.id === blockId 
-        ? { ...b, idClassroom: classroomId, classroomCode: classroom?.roomCode }
-        : b
-    ));
-  };
-
-  const saveSchedule = () => {
     if (scheduleBlocks.length === 0) {
       setToast({
         title: "Horario vacío",
@@ -394,12 +273,98 @@ export default function ScheduleBuilderPage() {
       return;
     }
 
-    console.log("Saving schedule:", scheduleBlocks);
-    setToast({
-      title: "Horario guardado",
-      description: `${scheduleBlocks.length} clases guardadas exitosamente`,
-      type: "success",
-    });
+    // Validar que todos los bloques tengan profesor y aula asignados
+    const incompleteBlocks = scheduleBlocks.filter(
+      block => !block.idProfessor || !block.classroomCode?.trim()
+    );
+
+    if (incompleteBlocks.length > 0) {
+      setToast({
+        title: "Horarios incompletos",
+        description: `Hay ${incompleteBlocks.length} clase(s) sin profesor o aula asignada`,
+        type: "error",
+      });
+      return;
+    }
+
+    setLoadingSchedules(true);
+
+    try {
+      // Agrupar bloques por curso (idCourse)
+      const courseMap = new Map<number, typeof scheduleBlocks>();
+      
+      scheduleBlocks.forEach(block => {
+        if (!courseMap.has(block.idCourse)) {
+          courseMap.set(block.idCourse, []);
+        }
+        courseMap.get(block.idCourse)!.push(block);
+      });
+
+      // Construir el payload para la API
+      const groupCourses = Array.from(courseMap.entries()).map(([idCourse, blocks]) => {
+        // Tomar el primer bloque para obtener info general del curso
+        const firstBlock = blocks[0];
+        
+        // Extraer el idSchedule si existe (para updates)
+        const schedules = blocks.map(block => {
+          // El ID original viene en el formato "schedule-{idSchedule}"
+          const idSchedule = block.id.startsWith('schedule-') 
+            ? parseInt(block.id.replace('schedule-', ''))
+            : undefined;
+
+          return {
+            idSchedule, // Opcional: presente si es un horario existente
+            dayOfWeek: block.dayOfWeek, // Enviar en inglés y mayúsculas (MONDAY, TUESDAY, etc.)
+            startTime: block.startTime,
+            endTime: block.endTime,
+            classroom: block.classroomCode || "",
+          };
+        });
+
+        return {
+          idGroupCourse: firstBlock.idGroupCourse || undefined,
+          idCourse: idCourse,
+          idProfessor: firstBlock.idProfessor!,
+          schedules,
+        };
+      });
+
+      const payload = {
+        idGroup: selectedGroup,
+        groupCourses,
+      };
+
+      console.log("Payload to save:", JSON.stringify(payload, null, 2));
+
+      // Llamar al servicio
+      await createOrUpdateGroupSchedules(payload);
+
+      setToast({
+        title: "Horario guardado",
+        description: `Se guardaron exitosamente ${scheduleBlocks.length} clases`,
+        type: "success",
+      });
+
+      // Recargar los horarios para obtener los IDs actualizados
+      setTimeout(() => {
+        if (selectedGroup) {
+          // Trigger reload by changing selectedGroup state
+          const currentGroup = selectedGroup;
+          setSelectedGroup(null);
+          setTimeout(() => setSelectedGroup(currentGroup), 100);
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      console.error("Error saving schedule:", error);
+      setToast({
+        title: "Error al guardar",
+        description: error?.message || "No se pudo guardar el horario",
+        type: "error",
+      });
+    } finally {
+      setLoadingSchedules(false);
+    }
   };
 
   useEffect(() => {
@@ -409,7 +374,8 @@ export default function ScheduleBuilderPage() {
     }
   }, [toast]);
 
-  // Filter time slots based on selected range
+  // endTime ahora representa la última hora donde INICIA una clase
+  // Por lo tanto, debe ser inclusivo en el filtro
   const filteredTimeSlots = TIME_SLOTS.filter(time => time >= startTime && time <= endTime);
 
   if (loading) {
@@ -427,7 +393,6 @@ export default function ScheduleBuilderPage() {
         />
       )}
 
-      {/* === Encabezado === */}
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-[15px] font-semibold text-gray-900">
@@ -456,16 +421,24 @@ export default function ScheduleBuilderPage() {
 
           <button
             onClick={saveSchedule}
-            disabled={scheduleBlocks.length === 0}
+            disabled={scheduleBlocks.length === 0 || loadingSchedules}
             className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-lg flex items-center justify-center gap-2 hover:brightness-95 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save size={18} />
-            Guardar Horario
+            {loadingSchedules ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save size={18} />
+                Guardar Horario
+              </>
+            )}
           </button>
         </div>
       </header>
 
-      {/* === Stats cards === */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center gap-3">
@@ -542,17 +515,17 @@ export default function ScheduleBuilderPage() {
               <>
                 <div className="mb-3 pb-3 border-b border-gray-200">
                   <p className="text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Cursos Disponibles
+                    Cursos de la División
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Arrastra al calendario →
+                    Arrastra al calendario para asignar →
                   </p>
                 </div>
 
                 <div className="space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
                   {availableCourses.map((course) => (
                     <div
-                      key={course.idGroupCourse}
+                      key={course.idCourse}
                       draggable
                       onDragStart={(e) => handleDragStart(e, course)}
                       className="bg-white border border-gray-200 rounded-lg p-3 cursor-move hover:border-primary hover:shadow-sm transition-all group"
@@ -566,14 +539,13 @@ export default function ScheduleBuilderPage() {
                           <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
                             {course.courseName}
                           </p>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              <Users className="w-3 h-3 text-gray-600" />
+                          {course.semester && (
+                            <div className="flex items-center gap-1 mt-1.5">
+                              <div className="px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600">
+                                Semestre {course.semester}
+                              </div>
                             </div>
-                            <p className="text-xs text-gray-500 truncate">
-                              {course.professorName}
-                            </p>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -581,7 +553,7 @@ export default function ScheduleBuilderPage() {
 
                   {availableCourses.length === 0 && (
                     <div className="text-center py-8 text-gray-500 text-sm">
-                      No hay cursos disponibles
+                      No hay cursos activos en esta división
                     </div>
                   )}
                 </div>
@@ -616,7 +588,6 @@ export default function ScheduleBuilderPage() {
                 </div>
               </div>
 
-              {/* Time range selector */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-gray-600" />
@@ -656,144 +627,33 @@ export default function ScheduleBuilderPage() {
                   </p>
                 </div>
               </div>
-            ) : (
-
-            <div className="overflow-x-auto">
-              <div className="min-w-[1000px]">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
-                    <tr>
-                      <th className="p-3 border-r border-b border-gray-200 text-left w-20">
-                        <span className="text-xs font-semibold text-gray-600">HORA</span>
-                      </th>
-                      {WEEK_DAYS.map((day) => (
-                        <th key={day.value} className="p-3 border-r last:border-r-0 border-b border-gray-200 text-center min-w-[180px]">
-                          <span className="text-xs font-semibold text-gray-700">{day.label}</span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody className="max-h-[calc(100vh-300px)] overflow-y-auto">
-                    {filteredTimeSlots.map((time) => {
-                      // Track which columns should be skipped (already occupied by rowspan)
-                      const skipColumns = new Set<string>();
-                      
-                      // Find blocks that are spanning this time slot
-                      WEEK_DAYS.forEach((day) => {
-                        const spanningBlock = scheduleBlocks.find(block => 
-                          block.dayOfWeek === day.value && 
-                          block.startTime < time && 
-                          block.endTime > time
-                        );
-                        if (spanningBlock) {
-                          skipColumns.add(day.value);
-                        }
-                      });
-
-                      return (
-                        <tr key={time} className="border-b border-gray-200">
-                          <td className="p-2 bg-gray-50 border-r border-gray-200 text-center min-h-[80px] w-20">
-                            <span className="text-xs text-gray-600 font-medium">{time}</span>
-                          </td>
-
-                          {WEEK_DAYS.map((day) => {
-                            // Skip if this cell is part of a rowspan from above
-                            if (skipColumns.has(day.value)) {
-                              return null;
-                            }
-
-                            // Find block starting at this time
-                            const block = scheduleBlocks.find(b => 
-                              b.dayOfWeek === day.value && 
-                              b.startTime === time
-                            );
-
-                            // Calculate rowspan
-                            let rowSpan = 1;
-                            if (block) {
-                              const startIdx = TIME_SLOTS.indexOf(block.startTime);
-                              const endIdx = TIME_SLOTS.indexOf(block.endTime);
-                              if (startIdx !== -1 && endIdx !== -1) {
-                                rowSpan = endIdx - startIdx;
-                              }
-                            }
-
-                            return (
-                              <td
-                                key={day.value}
-                                rowSpan={rowSpan}
-                                draggable={!!block}
-                                onDragStart={(e) => block && handleBlockDragStart(e, block)}
-                                onDragEnd={handleDragEnd}
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, day.value, time)}
-                                className={`border-r last:border-r-0 border-gray-200 min-h-[80px] min-w-[180px] transition-colors relative group ${
-                                  block 
-                                    ? 'bg-primary/10 border-l-4 border-l-primary cursor-move' 
-                                    : 'bg-white hover:bg-gray-50'
-                                }`}
-                              >
-                                {block ? (
-                                  <div className="p-2 h-full flex flex-col justify-between min-h-[80px]">
-                                    <div className="space-y-1">
-                                      <p className="text-xs font-bold text-gray-900 truncate">
-                                        {block.courseCode}
-                                      </p>
-                                      <p className="text-xs text-gray-600 line-clamp-2">
-                                        {block.courseName}
-                                      </p>
-                                    </div>
-
-                                    <div className="space-y-1 mt-2">
-                                      <div className="flex items-center gap-1 text-xs">
-                                        <MapPin size={10} className="text-gray-500 flex-shrink-0" />
-                                        <select
-                                          value={block.idClassroom}
-                                          onChange={(e) => updateBlockClassroom(block.id, Number(e.target.value))}
-                                          className="flex-1 bg-white text-gray-700 text-xs rounded px-1 py-0.5 border border-gray-300 cursor-pointer hover:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          {classrooms.map((classroom) => (
-                                            <option key={classroom.idClassroom} value={classroom.idClassroom}>
-                                              {classroom.roomCode}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ) : null}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            ) : loadingSchedules ? (
+              <div className="flex items-center justify-center py-32">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                  <p className="text-sm text-gray-500 font-medium">Cargando horarios...</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <ScheduleTable
+                scheduleBlocks={scheduleBlocks}
+                classrooms={classrooms}
+                timeSlots={filteredTimeSlots}
+                editingBlockId={editingBlockId}
+                newBlockPending={newBlockPending}
+                onBlockDragStart={handleBlockDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDrop={(e, day, time) => handleDrop(e, day, time, TIME_SLOTS)}
+                onStartEdit={handleStartEdit}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={handleCancelEdit}
+                onClickOutside={handleClickOutside}
+              />
             )}
           </div>
         </div>
       </div>
     </>
   );
-}
-
-function calculateEndTime(startTime: string, hours: number): string {
-  const [h, m] = startTime.split(":").map(Number);
-  const totalMinutes = h * 60 + m + (hours * 60);
-  const endH = Math.floor(totalMinutes / 60);
-  const endM = totalMinutes % 60;
-  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-}
-
-function calculateDurationHours(startTime: string, endTime: string): number {
-  const [sh, sm] = startTime.split(":").map(Number);
-  const [eh, em] = endTime.split(":").map(Number);
-  const startMinutes = sh * 60 + sm;
-  const endMinutes = eh * 60 + em;
-  return (endMinutes - startMinutes) / 60;
 }

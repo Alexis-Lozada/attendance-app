@@ -1,81 +1,198 @@
 "use client";
 
-import Calendar from "@/components/attendance/Calendar";
-import AttendanceStats from "@/components/attendance/AttendanceStats";
-import RiskStudents from "@/components/attendance/RiskStudents";
+import { Users, BookOpen, ListOrdered } from "lucide-react";
+import FilterSelect from "@/components/attendance/FilterSelect";
+import { useAttendanceFilters } from "@/hooks/attendance/useAttendanceFilters";
+import { useCourseSchedule } from "@/hooks/attendance/useCourseSchedule";
+import {
+  formatTimeAMPM,
+  formatClassDateEs,
+  isNowWithinClass,
+} from "@/utils/attendance/DateUtils";
 import AttendanceTable from "@/components/attendance/AttendanceTable";
+import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
+import { useRealtimeAttendance } from "@/hooks/attendance/useAttendancesRealtime";
 
 export default function AttendancePage() {
+  const {
+    loading,
+    error,
+    groups,
+    courses,
+    modules,
+    modulesMeta, // info completa de módulos
+    selectedGroup, // idGroup
+    selectedCourse, // idGroupCourse
+    selectedModule, // idModule
+    setSelectedGroup,
+    setSelectedCourse,
+    setSelectedModule,
+  } = useAttendanceFilters();
+
+  const groupInfo = groups.find((g) => g.value === selectedGroup);
+  const puedePasarLista = groupInfo?.puedePasarLista ?? false;
+  const esTutor = groupInfo?.esTutor ?? false;
+  const groupLabel = groupInfo?.label ?? "Sin grupo";
+
+  const courseInfo = courses.find((c) => c.value === selectedCourse);
+
+  // Info del módulo seleccionado (solo para fechas)
+  const moduleInfo = modulesMeta.find(
+    (m) => String(m.idModule) === selectedModule
+  );
+  const moduleStartDate = moduleInfo?.startDate ?? null; // "YYYY-MM-DD"
+  const moduleEndDate = moduleInfo?.endDate ?? null; // "YYYY-MM-DD"
+
+  // Horario real del backend (para botón "Pasar Asistencia")
+  const { schedule, loadingSchedule } = useCourseSchedule(
+    puedePasarLista,
+    selectedCourse
+  );
+
+  const canMarkNow =
+    !!schedule &&
+    isNowWithinClass(
+      schedule.dayOfWeek,
+      schedule.startTime,
+      schedule.endTime
+    );
+
+  const isButtonEnabled = puedePasarLista && canMarkNow;
+
+  // Calendario dinámico para la tabla
+  const {
+    weeks,
+    monthLabel,
+    loadingCalendar,
+    calendarError,
+  } = useAttendanceCalendar({
+    idGroup: selectedGroup,
+    idGroupCourse: selectedCourse,
+    moduleStartDate,
+    moduleEndDate,
+  });
+
+  // 🔥 Asistencias en tiempo real para el idGroupCourse dentro del rango del módulo
+  const idGroupCourseNumber = selectedCourse
+    ? Number(selectedCourse)
+    : undefined;
+
+  const { attendances } = useRealtimeAttendance(
+    idGroupCourseNumber,
+    moduleStartDate ?? undefined,
+    moduleEndDate ?? undefined
+  );
+
+  if (loading) return <p className="text-gray-700">Cargando filtros...</p>;
+  if (error) return <p className="text-red-600">{error}</p>;
+
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Columna izquierda */}
+      {/* Columna izquierda: filtros */}
       <div className="space-y-6 min-w-[240px] flex-shrink-0 lg:w-1/4">
-        <Calendar />
+        <FilterSelect
+          title="Grupo"
+          value={selectedGroup ?? ""}
+          options={groups}
+          onSelect={setSelectedGroup}
+          icon={<Users className="w-4 h-4" />}
+        />
 
-        {/* Filtros */}
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h4 className="text-sm font-medium mb-2">Curso</h4>
-          <p className="text-sm text-gray-600">
-            Desarrollo Web Profesional (9IDWI)
-          </p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h4 className="text-sm font-medium mb-2">Semestre</h4>
-          <p className="text-sm text-gray-600">9no Cuatrimestre</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <h4 className="text-sm font-medium mb-2">Grupo</h4>
-          <p className="text-sm text-gray-600">IDGS12</p>
-        </div>
+        <FilterSelect
+          title="Curso"
+          value={selectedCourse ?? ""}
+          options={puedePasarLista ? courses : []}
+          onSelect={setSelectedCourse}
+          icon={<BookOpen className="w-4 h-4" />}
+        />
+
+        <FilterSelect
+          title="Modulo"
+          value={selectedModule ?? ""}
+          options={modules}
+          onSelect={setSelectedModule}
+          icon={<ListOrdered className="w-4 h-4" />}
+        />
       </div>
 
       {/* Columna derecha */}
-      <div className="flex-1 space-y-6">
-        {/* Contenedor con curso, hora y botón */}
+      <div className="flex-1 min-w-0 space-y-6">
+        {/* Tarjeta de info */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          {/* Columna 1: Curso */}
           <div>
-            <h4 className="text-sm font-medium text-gray-900">
-              Desarrollo Web Profesional (9IDWI)
+            <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2 mb-1">
+              {groupLabel}
+              {esTutor && (
+                <span className="bg-primary text-white px-2 py-0.5 rounded-sm font-medium text-xs">
+                  Grupo tutorado
+                </span>
+              )}
             </h4>
-            <p className="text-xs text-gray-500">9no Semestre | Grupo IDGS12</p>
-          </div>
 
-          {/* Columna 2: Hora */}
-          <div className="md:border-l md:border-gray-200 md:pl-4">
-            <h4 className="text-sm font-medium text-gray-900">
-              Hora - 10:00 AM a 10:45 AM
-            </h4>
             <p className="text-xs text-gray-500">
-              Semana 3 - Martes 17 de enero 2020
+              {puedePasarLista
+                ? courseInfo
+                  ? `Curso: ${courseInfo.label}`
+                  : "Selecciona un curso"
+                : "No puedes pasar lista en este grupo"}
             </p>
           </div>
 
-          {/* Columna 3: Botón */}
-          <div>
-            <button className="bg-[#2B2B2B] text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-[#3c3c3c] transition">
-              Pasar Asistencia
-            </button>
-          </div>
+          {puedePasarLista && (
+            <div className="md:border-l md:border-gray-200 md:pl-4">
+              {loadingSchedule ? (
+                <p className="text-sm text-gray-700">Cargando horario...</p>
+              ) : schedule ? (
+                <>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    Hora - {formatTimeAMPM(schedule.startTime)} a{" "}
+                    {formatTimeAMPM(schedule.endTime)}
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    {formatClassDateEs(
+                      schedule.dayOfWeek,
+                      schedule.startTime,
+                      schedule.endTime
+                    )}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-gray-500 italic">
+                  No hay clases próximas.
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            disabled={!isButtonEnabled}
+            className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
+              isButtonEnabled
+                ? "hover:bg-primary/90 cursor-pointer"
+                : "opacity-60 cursor-not-allowed"
+            }`}
+          >
+            Pasar Asistencia
+          </button>
         </div>
 
-        {/* Grid de estadísticas y estudiantes en riesgo */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Estadísticas de asistencia */}
-          <AttendanceStats
-            rate={89.2}
-            diff={2.8}
-            onTime={86}
-            late={12}
-            pending={2}
+        {/* Mensajes de estado del calendario */}
+        {calendarError && (
+          <p className="text-xs text-red-500">{calendarError}</p>
+        )}
+
+        {/* Tabla de asistencias con datos reales */}
+        {loadingCalendar ? (
+          <p className="text-sm text-gray-700">
+            Generando calendario de asistencias...
+          </p>
+        ) : (
+          <AttendanceTable
+            monthLabel={monthLabel}
+            weeks={weeks}
+            attendances={attendances}
           />
-
-          {/* Estudiantes en riesgo */}
-          <RiskStudents />
-        </div>
-
-        {/* Lista de asistencia */}
-        <AttendanceTable />
+        )}
       </div>
     </div>
   );
