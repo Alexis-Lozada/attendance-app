@@ -103,7 +103,26 @@ apis.forEach((api) => {
         return Promise.reject(error);
       }
 
+      // Manejo de errores de negocio (400, 404, etc.)
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        // Extraer mensaje de diferentes formatos posibles
+        const errorMessage = 
+          errorData.error || 
+          errorData.message || 
+          (typeof errorData === 'string' ? errorData : null) ||
+          'Error desconocido';
 
+        const businessLogicError = new Error(errorMessage);
+        
+        // Mantener información adicional del error original
+        (businessLogicError as any).status = error.response.status;
+        (businessLogicError as any).response = error.response;
+        (businessLogicError as any).isBusinessLogicError = true;
+        
+        return Promise.reject(businessLogicError);
+      }
 
       return Promise.reject(error);
     }
