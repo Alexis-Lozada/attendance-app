@@ -8,6 +8,9 @@ export interface AttendanceResponse {
   attendanceDate: string;
   status: string;
   comments?: string;
+  studentName?: string;
+  enrollmentNumber?: string;
+  profileImage?: string;
 }
 
 /** === Obtener asistencias por GroupCourse === */
@@ -17,6 +20,22 @@ export async function getAttendancesByGroupCourse(
   const { data } = await attendanceApi.get(
     `/attendances/group-course/${idGroupCourse}`
   );
+  return data;
+}
+
+/** === Obtener asistencias por Schedule === */
+export async function getAttendancesBySchedule(
+  idSchedule: number
+): Promise<AttendanceResponse[]> {
+  const { data } = await attendanceApi.get(`/attendances/schedule/${idSchedule}`);
+  return data;
+}
+
+/** === Obtener asistencias por Student === */
+export async function getAttendancesByStudent(
+  idStudent: number
+): Promise<AttendanceResponse[]> {
+  const { data } = await attendanceApi.get(`/attendances/student/${idStudent}`);
   return data;
 }
 

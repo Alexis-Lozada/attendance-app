@@ -11,6 +11,7 @@ import {
 } from "@/utils/attendance/DateUtils";
 import AttendanceTable from "@/components/attendance/AttendanceTable";
 import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
+import { useRealtimeAttendance } from "@/hooks/attendance/useAttendancesRealtime";
 
 export default function AttendancePage() {
   const {
@@ -19,10 +20,10 @@ export default function AttendancePage() {
     groups,
     courses,
     modules,
-    modulesMeta,       // info completa de módulos
-    selectedGroup,     // idGroup
-    selectedCourse,    // idGroupCourse
-    selectedModule,    // idModule
+    modulesMeta, // info completa de módulos
+    selectedGroup, // idGroup
+    selectedCourse, // idGroupCourse
+    selectedModule, // idModule
     setSelectedGroup,
     setSelectedCourse,
     setSelectedModule,
@@ -35,12 +36,12 @@ export default function AttendancePage() {
 
   const courseInfo = courses.find((c) => c.value === selectedCourse);
 
-  // Info del módulo seleccionado (solo para fechas, ya no se muestra texto)
+  // Info del módulo seleccionado (solo para fechas)
   const moduleInfo = modulesMeta.find(
     (m) => String(m.idModule) === selectedModule
   );
-  const moduleStartDate = moduleInfo?.startDate ?? null;
-  const moduleEndDate = moduleInfo?.endDate ?? null;
+  const moduleStartDate = moduleInfo?.startDate ?? null; // "YYYY-MM-DD"
+  const moduleEndDate = moduleInfo?.endDate ?? null; // "YYYY-MM-DD"
 
   // Horario real del backend (para botón "Pasar Asistencia")
   const { schedule, loadingSchedule } = useCourseSchedule(
@@ -70,6 +71,17 @@ export default function AttendancePage() {
     moduleStartDate,
     moduleEndDate,
   });
+
+  // 🔥 Asistencias en tiempo real para el idGroupCourse dentro del rango del módulo
+  const idGroupCourseNumber = selectedCourse
+    ? Number(selectedCourse)
+    : undefined;
+
+  const { attendances } = useRealtimeAttendance(
+    idGroupCourseNumber,
+    moduleStartDate ?? undefined,
+    moduleEndDate ?? undefined
+  );
 
   if (loading) return <p className="text-gray-700">Cargando filtros...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
@@ -169,13 +181,17 @@ export default function AttendancePage() {
           <p className="text-xs text-red-500">{calendarError}</p>
         )}
 
-        {/* Tabla de asistencias */}
+        {/* Tabla de asistencias con datos reales */}
         {loadingCalendar ? (
           <p className="text-sm text-gray-700">
             Generando calendario de asistencias...
           </p>
         ) : (
-          <AttendanceTable monthLabel={monthLabel} weeks={weeks} />
+          <AttendanceTable
+            monthLabel={monthLabel}
+            weeks={weeks}
+            attendances={attendances}
+          />
         )}
       </div>
     </div>
