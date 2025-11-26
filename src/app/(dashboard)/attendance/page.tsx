@@ -1,17 +1,24 @@
 "use client";
 
 import { Users, BookOpen, ListOrdered } from "lucide-react";
+
 import FilterSelect from "@/components/attendance/FilterSelect";
+import AttendanceTable from "@/components/attendance/AttendanceTable";
+
 import { useAttendanceFilters } from "@/hooks/attendance/useAttendanceFilters";
 import { useCourseSchedule } from "@/hooks/attendance/useCourseSchedule";
+import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
+import { useRealtimeAttendance } from "@/hooks/attendance/useAttendancesRealtime";
+import { useAttendanceSessionStart } from "@/hooks/attendance/useAttendanceSessionStart";
+
 import {
   formatTimeAMPM,
   formatClassDateEs,
   isNowWithinClass,
 } from "@/utils/attendance/DateUtils";
-import AttendanceTable from "@/components/attendance/AttendanceTable";
-import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
-import { useRealtimeAttendance } from "@/hooks/attendance/useAttendancesRealtime";
+
+import { useAuth } from "@/context/AuthContext";
+import Toast from "@/components/ui/Toast";
 
 export default function AttendancePage() {
   const {
@@ -20,14 +27,16 @@ export default function AttendancePage() {
     groups,
     courses,
     modules,
-    modulesMeta, // info completa de módulos
-    selectedGroup, // idGroup
-    selectedCourse, // idGroupCourse
-    selectedModule, // idModule
+    modulesMeta,
+    selectedGroup,
+    selectedCourse,
+    selectedModule,
     setSelectedGroup,
     setSelectedCourse,
     setSelectedModule,
   } = useAttendanceFilters();
+
+  const { user } = useAuth();
 
   const groupInfo = groups.find((g) => g.value === selectedGroup);
   const puedePasarLista = groupInfo?.puedePasarLista ?? false;
@@ -37,11 +46,9 @@ export default function AttendancePage() {
   const courseInfo = courses.find((c) => c.value === selectedCourse);
 
   // Info del módulo seleccionado (solo para fechas)
-  const moduleInfo = modulesMeta.find(
-    (m) => String(m.idModule) === selectedModule
-  );
-  const moduleStartDate = moduleInfo?.startDate ?? null; // "YYYY-MM-DD"
-  const moduleEndDate = moduleInfo?.endDate ?? null; // "YYYY-MM-DD"
+  const moduleInfo = modulesMeta.find((m) => String(m.idModule) === selectedModule);
+  const moduleStartDate = moduleInfo?.startDate ?? null;
+  const moduleEndDate = moduleInfo?.endDate ?? null;
 
   // Horario real del backend (para botón "Pasar Asistencia")
   const { schedule, loadingSchedule } = useCourseSchedule(
@@ -51,34 +58,32 @@ export default function AttendancePage() {
 
   const canMarkNow =
     !!schedule &&
-    isNowWithinClass(
-      schedule.dayOfWeek,
-      schedule.startTime,
-      schedule.endTime
-    );
+    isNowWithinClass(schedule.dayOfWeek, schedule.startTime, schedule.endTime);
 
-  const isButtonEnabled = puedePasarLista && canMarkNow;
+  // Inicio de sesión de asistencia
+  const idGroupCourseNumber = selectedCourse ? Number(selectedCourse) : null;
+  const { startingSession, isSessionOpen, toast, clearToast, start } =
+    useAttendanceSessionStart({
+      idGroupCourse: idGroupCourseNumber,
+      idSchedule: schedule?.idSchedule ?? null,
+      idProfessor: user?.idUser ?? null,
+    });
+
+  const isButtonEnabled =
+    puedePasarLista && canMarkNow && !startingSession && !isSessionOpen;
 
   // Calendario dinámico para la tabla
-  const {
-    weeks,
-    monthLabel,
-    loadingCalendar,
-    calendarError,
-  } = useAttendanceCalendar({
-    idGroup: selectedGroup,
-    idGroupCourse: selectedCourse,
-    moduleStartDate,
-    moduleEndDate,
-  });
+  const { weeks, monthLabel, loadingCalendar, calendarError } =
+    useAttendanceCalendar({
+      idGroup: selectedGroup,
+      idGroupCourse: selectedCourse,
+      moduleStartDate,
+      moduleEndDate,
+    });
 
-  // 🔥 Asistencias en tiempo real para el idGroupCourse dentro del rango del módulo
-  const idGroupCourseNumber = selectedCourse
-    ? Number(selectedCourse)
-    : undefined;
-
+  // Asistencias en tiempo real para el idGroupCourse dentro del rango del módulo
   const { attendances } = useRealtimeAttendance(
-    idGroupCourseNumber,
+    idGroupCourseNumber ?? undefined,
     moduleStartDate ?? undefined,
     moduleEndDate ?? undefined
   );
@@ -165,6 +170,7 @@ export default function AttendancePage() {
           )}
 
           <button
+            onClick={start}
             disabled={!isButtonEnabled}
             className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
               isButtonEnabled
@@ -172,14 +178,12 @@ export default function AttendancePage() {
                 : "opacity-60 cursor-not-allowed"
             }`}
           >
-            Pasar Asistencia
+            {startingSession ? "Iniciando..." : "Pasar Asistencia"}
           </button>
         </div>
 
         {/* Mensajes de estado del calendario */}
-        {calendarError && (
-          <p className="text-xs text-red-500">{calendarError}</p>
-        )}
+        {calendarError && <p className="text-xs text-red-500">{calendarError}</p>}
 
         {/* Tabla de asistencias con datos reales */}
         {loadingCalendar ? (
@@ -191,6 +195,16 @@ export default function AttendancePage() {
             monthLabel={monthLabel}
             weeks={weeks}
             attendances={attendances}
+          />
+        )}
+
+        {/* Toast */}
+        {toast && (
+          <Toast
+            title={toast.title}
+            description={toast.description}
+            type={toast.type}
+            onClose={clearToast}
           />
         )}
       </div>
