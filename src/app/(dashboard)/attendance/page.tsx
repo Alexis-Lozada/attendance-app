@@ -20,6 +20,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import Toast from "@/components/ui/Toast";
 
+import { UserRole } from "@/types/roles";
+
 export default function AttendancePage() {
   const {
     loading,
@@ -46,7 +48,9 @@ export default function AttendancePage() {
   const courseInfo = courses.find((c) => c.value === selectedCourse);
 
   // Info del módulo seleccionado (solo para fechas)
-  const moduleInfo = modulesMeta.find((m) => String(m.idModule) === selectedModule);
+  const moduleInfo = modulesMeta.find(
+    (m) => String(m.idModule) === selectedModule
+  );
   const moduleStartDate = moduleInfo?.startDate ?? null;
   const moduleEndDate = moduleInfo?.endDate ?? null;
 
@@ -81,6 +85,8 @@ export default function AttendancePage() {
     !startingSession &&
     !loadingCanStart &&
     canStart;
+
+  const showPassButton = user?.role !== UserRole.STUDENT;
 
   // Calendario dinámico para la tabla
   const { weeks, monthLabel, loadingCalendar, calendarError } =
@@ -133,8 +139,13 @@ export default function AttendancePage() {
       {/* Columna derecha */}
       <div className="flex-1 min-w-0 space-y-6">
         {/* Tarjeta de info */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
+        <div
+          className={`bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center gap-4 ${
+            showPassButton ? "md:justify-between" : "md:justify-start"
+          }`}
+        >
+          {/* Bloque info (cuando no hay botón, ocupa la mitad) */}
+          <div className={showPassButton ? "" : "md:flex-1 md:min-w-0"}>
             <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2 mb-1">
               {groupLabel}
               {esTutor && (
@@ -154,7 +165,12 @@ export default function AttendancePage() {
           </div>
 
           {puedePasarLista && (
-            <div className="md:border-l md:border-gray-200 md:pl-4">
+            // Bloque hora (cuando no hay botón, ocupa la otra mitad)
+            <div
+              className={`md:border-l md:border-gray-200 md:pl-4 ${
+                showPassButton ? "" : "md:flex-1 md:min-w-0"
+              }`}
+            >
               {loadingSchedule ? (
                 <p className="text-sm text-gray-700">Cargando horario...</p>
               ) : schedule ? (
@@ -179,17 +195,19 @@ export default function AttendancePage() {
             </div>
           )}
 
-          <button
-            onClick={start}
-            disabled={!isButtonEnabled}
-            className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
-              isButtonEnabled
-                ? "hover:bg-primary/90 cursor-pointer"
-                : "opacity-60 cursor-not-allowed"
-            }`}
-          >
-            {startingSession ? "Iniciando..." : "Pasar Asistencia"}
-          </button>
+          {showPassButton && (
+            <button
+              onClick={start}
+              disabled={!isButtonEnabled}
+              className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
+                isButtonEnabled
+                  ? "hover:bg-primary/90 cursor-pointer"
+                  : "opacity-60 cursor-not-allowed"
+              }`}
+            >
+              {startingSession ? "Iniciando..." : "Pasar Asistencia"}
+            </button>
+          )}
         </div>
 
         {/* Mensajes de estado del calendario */}
