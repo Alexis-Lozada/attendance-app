@@ -60,17 +60,27 @@ export default function AttendancePage() {
     !!schedule &&
     isNowWithinClass(schedule.dayOfWeek, schedule.startTime, schedule.endTime);
 
-  // Inicio de sesión de asistencia
+  // Lógica para iniciar sesión de asistencia
   const idGroupCourseNumber = selectedCourse ? Number(selectedCourse) : null;
-  const { startingSession, isSessionOpen, toast, clearToast, start } =
-    useAttendanceSessionStart({
-      idGroupCourse: idGroupCourseNumber,
-      idSchedule: schedule?.idSchedule ?? null,
-      idProfessor: user?.idUser ?? null,
-    });
+  const {
+    startingSession,
+    toast,
+    clearToast,
+    start,
+    canStart,
+    loadingCanStart,
+  } = useAttendanceSessionStart({
+    idGroupCourse: idGroupCourseNumber,
+    idSchedule: schedule?.idSchedule ?? null,
+    idProfessor: user?.idUser ?? null,
+  });
 
   const isButtonEnabled =
-    puedePasarLista && canMarkNow && !startingSession && !isSessionOpen;
+    puedePasarLista &&
+    canMarkNow &&
+    !startingSession &&
+    !loadingCanStart &&
+    canStart;
 
   // Calendario dinámico para la tabla
   const { weeks, monthLabel, loadingCalendar, calendarError } =
