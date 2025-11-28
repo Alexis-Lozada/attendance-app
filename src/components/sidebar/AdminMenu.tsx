@@ -58,31 +58,42 @@ export default function AdminMenu({ className = "" }: AdminMenuProps) {
 
       {open && (
         <div className="ml-6 relative mt-1" ref={listRef}>
-          {/* línea vertical principal con altura dinámica (mitad de 'Usuarios') */}
+          {/* línea vertical principal con altura dinámica */}
           <div className="absolute left-0 w-px bg-gray-300" style={{ height: lineHeight }} />
+          
           <div className="space-y-1">
             {user?.role === "ADMIN" && (
-            <NavItem
-              href="/admin/university"
-              icon={<University size={18} />}
-              label="Universidad"
-            />
+              <NavItem
+                href="/admin/university"
+                icon={<University size={18} />}
+                label="Universidad"
+              />
             )}
+
             <NavItem
               href="/admin/divisions"
               icon={<FolderTree size={18} />}
               label="Divisiones"
             />
+
             <NavItem
               href="/admin/programs"
               icon={<BookOpen size={18} />}
               label="Programas"
             />
+
+            <NavItem
+              href="/admin/courses"
+              icon={<BookOpen size={18} />}
+              label="Cursos"
+            />
+
             <NavItem
               href="/admin/groups"
               icon={<Users size={18} />}
               label="Grupos"
             />
+
             <NavItem
               href="/admin/users"
               icon={<UserCog size={18} />}
