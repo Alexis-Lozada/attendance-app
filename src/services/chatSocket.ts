@@ -7,7 +7,10 @@ let stompClient: Client | null = null;
 export function initChatSocket(onConnectCallback?: () => void) {
   if (stompClient && stompClient.active) return stompClient;
 
-  const socket = new SockJS("http://localhost:8085/ws-chat");
+  const socket = new SockJS(
+    `${process.env.NEXT_PUBLIC_CHAT_MS_URL!.replace("/api", "")}/ws-chat`
+  );
+
   stompClient = new Client({
     webSocketFactory: () => socket,
     reconnectDelay: 5000,
