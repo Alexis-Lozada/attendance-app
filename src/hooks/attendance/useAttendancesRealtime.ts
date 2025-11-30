@@ -45,7 +45,7 @@ export function useRealtimeAttendance(
     fetchAttendances();
 
     // 2️⃣ Conectar al WebSocket
-    const socket = new SockJS(`${process.env.NEXT_PUBLIC_ATTENDANCE_MS_URL!.replace("/api", "")}/ws`);
+    const socket = new SockJS(`${process.env.NEXT_PUBLIC_API_GATEWAY_URL!.replace("/api", "")}/ws`);
     const client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,

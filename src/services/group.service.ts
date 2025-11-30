@@ -1,4 +1,4 @@
-import { academicApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface GroupResponse {
   idGroup: number;
@@ -15,19 +15,19 @@ export interface GroupResponse {
 
 // === Obtener todos los grupos ===
 export async function getAllGroups(): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get("/groups");
+  const { data } = await api.get("/groups");
   return data;
 }
 
 // === Obtener grupos activos ===
 export async function getActiveGroups(): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get("/groups/active");
+  const { data } = await api.get("/groups/active");
   return data;
 }
 
 // === Obtener grupo por ID ===
 export async function getGroupById(id: number): Promise<GroupResponse> {
-  const { data } = await academicApi.get(`/groups/${id}`);
+  const { data } = await api.get(`/groups/${id}`);
   return data;
 }
 
@@ -36,7 +36,7 @@ export async function getGroupsByProgram(
   idProgram: number,
   active?: boolean
 ): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/program/${idProgram}`, {
+  const { data } = await api.get(`/groups/program/${idProgram}`, {
     params: active !== undefined ? { active } : {},
   });
   return data;
@@ -44,13 +44,13 @@ export async function getGroupsByProgram(
 
 // === Obtener grupos por universidad ===
 export async function getGroupsByUniversity(idUniversity: number): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/university/${idUniversity}`);
+  const { data } = await api.get(`/groups/university/${idUniversity}`);
   return data;
 }
 
 // === Obtener grupos activos por universidad ===
 export async function getActiveGroupsByUniversity(idUniversity: number): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/university/${idUniversity}/active`);
+  const { data } = await api.get(`/groups/university/${idUniversity}/active`);
   return data;
 }
 
@@ -59,7 +59,7 @@ export async function getGroupsByDivision(
   idDivision: number,
   active?: boolean
 ): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/division/${idDivision}`, {
+  const { data } = await api.get(`/groups/division/${idDivision}`, {
     params: active !== undefined ? { active } : {},
   });
   return data;
@@ -67,7 +67,7 @@ export async function getGroupsByDivision(
 
 // === Obtener grupos por tutor ===
 export async function getGroupsByTutor(idTutor: number): Promise<GroupResponse[]> {
-  const { data } = await academicApi.get(`/groups/tutor/${idTutor}`);
+  const { data } = await api.get(`/groups/tutor/${idTutor}`);
   return data;
 }
 
@@ -80,7 +80,7 @@ export async function createGroup(payload: {
   academicYear: string;
   status: boolean;
 }): Promise<GroupResponse> {
-  const { data } = await academicApi.post("/groups", payload);
+  const { data } = await api.post("/groups", payload);
   return data;
 }
 
@@ -98,7 +98,7 @@ export async function updateGroup(
   }
 ): Promise<GroupResponse> {
   try {
-    const { data } = await academicApi.put(`/groups/${id}`, payload);
+    const { data } = await api.put(`/groups/${id}`, payload);
     return data;
   } catch (error: any) {
     throw error;
@@ -108,7 +108,7 @@ export async function updateGroup(
 // === Actualizar estado del grupo ===
 export async function updateGroupStatus(id: number, status: boolean): Promise<GroupResponse> {
   try {
-    const { data } = await academicApi.put(`/groups/${id}/status?status=${status}`);
+    const { data } = await api.put(`/groups/${id}/status?status=${status}`);
     return data;
   } catch (error: any) {
     throw error;
@@ -118,7 +118,7 @@ export async function updateGroupStatus(id: number, status: boolean): Promise<Gr
 // === Eliminar grupo (PERMANENTE) ===
 export async function deleteGroup(id: number): Promise<void> {
   try {
-    const { data } = await academicApi.delete(`/groups/${id}`);
+    const { data } = await api.delete(`/groups/${id}`);
     return data;
   } catch (error: any) {
     throw error;

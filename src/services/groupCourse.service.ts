@@ -1,4 +1,4 @@
-import { attendanceApi } from "@/services/api";
+import { api } from "@/services/api";
 
 // === Interfaces ===
 export interface GroupCourseResponse {
@@ -14,31 +14,31 @@ export interface GroupCourseResponse {
 
 // === Obtener todos los registros ===
 export async function getAllGroupCourses(): Promise<GroupCourseResponse[]> {
-  const { data } = await attendanceApi.get("/group-courses");
+  const { data } = await api.get("/group-courses");
   return data;
 }
 
 // === Obtener un registro por ID ===
 export async function getGroupCourseById(id: number): Promise<GroupCourseResponse> {
-  const { data } = await attendanceApi.get(`/group-courses/${id}`);
+  const { data } = await api.get(`/group-courses/${id}`);
   return data;
 }
 
 // === Obtener registros por grupo ===
 export async function getGroupCoursesByGroup(idGroup: number): Promise<GroupCourseResponse[]> {
-  const { data } = await attendanceApi.get(`/group-courses/group/${idGroup}`);
+  const { data } = await api.get(`/group-courses/group/${idGroup}`);
   return data;
 }
 
 // === Obtener registros por profesor ===
 export async function getGroupCoursesByProfessor(idProfessor: number): Promise<GroupCourseResponse[]> {
-  const { data } = await attendanceApi.get(`/group-courses/professor/${idProfessor}`);
+  const { data } = await api.get(`/group-courses/professor/${idProfessor}`);
   return data;
 }
 
 // === Contar registros por curso ===
 export async function countGroupCoursesByCourse(idCourse: number): Promise<number> {
-  const { data } = await attendanceApi.get(`/group-courses/course/${idCourse}/count`);
+  const { data } = await api.get(`/group-courses/course/${idCourse}/count`);
   return data;
 }
 
@@ -56,7 +56,7 @@ export async function saveGroupCourse(payload: {
     : `/group-courses`;
   const method = idGroupCourse ? "put" : "post";
 
-  const { data } = await attendanceApi.request({
+  const { data } = await api.request({
     url,
     method,
     data: body,
@@ -67,5 +67,5 @@ export async function saveGroupCourse(payload: {
 
 // === Eliminar una asignación ===
 export async function deleteGroupCourse(id: number): Promise<void> {
-  await attendanceApi.delete(`/group-courses/${id}`);
+  await api.delete(`/group-courses/${id}`);
 }

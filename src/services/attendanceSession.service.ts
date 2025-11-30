@@ -1,4 +1,4 @@
-import { attendanceApi } from "@/services/api";
+import { api } from "@/services/api";
 
 /** === Interfaces === */
 export interface AttendanceSessionResponse {
@@ -25,7 +25,7 @@ export async function startAttendanceSession(payload: {
   geoLatitude?: number;
   geoLongitude?: number;
 }): Promise<AttendanceSessionResponse> {
-  const { data } = await attendanceApi.post("/sessions/start", payload);
+  const { data } = await api.post("/sessions/start", payload);
   return data;
 }
 
@@ -34,7 +34,7 @@ export async function canStartAttendanceSession(
   idGroupCourse: number,
   idSchedule: number
 ): Promise<boolean> {
-  const { data } = await attendanceApi.get<CanStartSessionResponse>(
+  const { data } = await api.get<CanStartSessionResponse>(
     `/sessions/can-start`,
     {
       params: {

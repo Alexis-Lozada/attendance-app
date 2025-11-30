@@ -1,4 +1,4 @@
-import { academicApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface ConfigurationResponse {
   idConfiguration: number;
@@ -12,7 +12,7 @@ export interface ConfigurationResponse {
 export async function getConfigurationsByUniversity(
   idUniversity: number
 ): Promise<ConfigurationResponse[]> {
-  const { data } = await academicApi.get(`/configurations/university/${idUniversity}`);
+  const { data } = await api.get(`/configurations/university/${idUniversity}`);
   return data;
 }
 
@@ -51,7 +51,7 @@ export async function updateUniversityThemeColor(
       }
 
       // ✅ Actualizar existente (solo IDs planos)
-      await academicApi.put(`/configurations/${themeConfig.idConfiguration}`, {
+      await api.put(`/configurations/${themeConfig.idConfiguration}`, {
         idConfiguration: themeConfig.idConfiguration,
         idUniversity,
         parameterName: themeConfig.parameterName,
@@ -64,7 +64,7 @@ export async function updateUniversityThemeColor(
       );
     } else {
       // ✅ Crear nueva configuración si no existe
-      await academicApi.post(`/configurations`, {
+      await api.post(`/configurations`, {
         idUniversity,
         parameterName: "theme_primary_color",
         parameterValue: color,

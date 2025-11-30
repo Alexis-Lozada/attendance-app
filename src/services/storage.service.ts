@@ -1,4 +1,4 @@
-import { storageApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface FileResponse {
   idFile?: number;
@@ -58,7 +58,7 @@ export async function getFileByUuid(uuid: string): Promise<FileResponse | null> 
   }
 
   try {
-    const { data } = await storageApi.get(`/files/${uuid}`);
+    const { data } = await api.get(`/files/${uuid}`);
     if (data?.url) {
       fileCache.set(uuid, data.url);
       persistCache(); // guardar en localStorage
@@ -80,7 +80,7 @@ export async function getFileUrl(uuid: string): Promise<string | null> {
   if (fileCache.has(uuid)) return fileCache.get(uuid)!;
 
   try {
-    const { data } = await storageApi.get(`/files/${uuid}`);
+    const { data } = await api.get(`/files/${uuid}`);
     const url = data?.url || null;
     if (url) {
       fileCache.set(uuid, url);
@@ -101,7 +101,7 @@ export async function uploadFile(file: File): Promise<string | null> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const { data } = await storageApi.post("/files/upload", formData, {
+    const { data } = await api.post("/files/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
@@ -123,7 +123,7 @@ export async function uploadFile(file: File): Promise<string | null> {
 export async function deleteFile(uuid: string): Promise<void> {
   if (!uuid) return;
   try {
-    await storageApi.delete(`/files/${uuid}`);
+    await api.delete(`/files/${uuid}`);
     fileCache.delete(uuid);
     persistCache(); // guardar en localStorage
     console.log(`Archivo ${uuid} eliminado correctamente`);

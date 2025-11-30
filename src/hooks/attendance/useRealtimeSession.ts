@@ -22,7 +22,7 @@ export function useRealtimeSession(idGroupCourse?: number) {
   useEffect(() => {
     if (!idGroupCourse) return;
 
-    const socketURL = `${process.env.NEXT_PUBLIC_ATTENDANCE_MS_URL!.replace("/api", "")}/ws`;
+    const socketURL = `${process.env.NEXT_PUBLIC_API_GATEWAY_URL!.replace("/api", "")}/ws`;
 
     const socket = new SockJS(socketURL);
 

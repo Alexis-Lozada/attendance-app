@@ -1,4 +1,4 @@
-import { academicApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface CourseModuleResponse {
   idModule: number;
@@ -11,13 +11,13 @@ export interface CourseModuleResponse {
 
 // === Obtener módulos por curso ===
 export async function getModulesByCourse(idCourse: number): Promise<CourseModuleResponse[]> {
-  const { data } = await academicApi.get(`/course-modules/course/${idCourse}`);
+  const { data } = await api.get(`/course-modules/course/${idCourse}`);
   return data;
 }
 
 // === Obtener módulo por ID ===
 export async function getModuleById(idModule: number): Promise<CourseModuleResponse> {
-  const { data } = await academicApi.get(`/course-modules/${idModule}`);
+  const { data } = await api.get(`/course-modules/${idModule}`);
   return data;
 }
 
@@ -29,7 +29,7 @@ export async function createModule(payload: {
   startDate: string;
   endDate: string;
 }): Promise<CourseModuleResponse> {
-  const { data } = await academicApi.post("/course-modules", payload);
+  const { data } = await api.post("/course-modules", payload);
   return data;
 }
 
@@ -44,11 +44,11 @@ export async function updateModule(
     endDate: string;
   }
 ): Promise<CourseModuleResponse> {
-  const { data } = await academicApi.put(`/course-modules/${idModule}`, payload);
+  const { data } = await api.put(`/course-modules/${idModule}`, payload);
   return data;
 }
 
 // === Eliminar módulo ===
 export async function deleteModule(idModule: number): Promise<void> {
-  await academicApi.delete(`/course-modules/${idModule}`);
+  await api.delete(`/course-modules/${idModule}`);
 }

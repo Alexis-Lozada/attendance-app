@@ -1,4 +1,4 @@
-import { chatApi } from "@/services/api";
+import { api } from "@/services/api";
 
 // === Tipos DTO ===
 export interface ConversationDTO {
@@ -35,18 +35,18 @@ export interface MessageDTO {
 
 // === Conversations ===
 export async function getConversationsByUser(userId: number): Promise<ConversationDTO[]> {
-  const { data } = await chatApi.get(`/chats/${userId}`);
+  const { data } = await api.get(`/chats/${userId}`);
   return data;
 }
 
 export async function createConversation(payload: Partial<ConversationDTO>): Promise<ConversationDTO> {
-  const { data } = await chatApi.post("/chats", payload);
+  const { data } = await api.post("/chats", payload);
   return data;
 }
 
 // === Messages ===
 export async function getMessages(conversationId: number): Promise<MessageDTO[]> {
-  const { data } = await chatApi.get(`/chats/messages/${conversationId}`);
+  const { data } = await api.get(`/chats/messages/${conversationId}`);
   return data;
 }
 
@@ -63,22 +63,22 @@ export async function sendMessage(
     ? `/chats/messages/${conversationId}`
     : `/chats/messages`; // <-- el backend crea la conversación automáticamente
 
-  const { data } = await chatApi.post(endpoint, payload);
+  const { data } = await api.post(endpoint, payload);
   return data;
 }
 
 export async function markMessageAsRead(messageId: number): Promise<MessageDTO> {
-  const { data } = await chatApi.patch(`/chats/messages/${messageId}/read`);
+  const { data } = await api.patch(`/chats/messages/${messageId}/read`);
   return data;
 }
 
 // === Participants ===
 export async function getParticipantsByUser(userId: number): Promise<ParticipantDTO[]> {
-  const { data } = await chatApi.get(`/chats/participants/${userId}`);
+  const { data } = await api.get(`/chats/participants/${userId}`);
   return data;
 }
 
 export async function addParticipant(payload: Partial<ParticipantDTO>): Promise<ParticipantDTO> {
-  const { data } = await chatApi.post("/chats/participants", payload);
+  const { data } = await api.post("/chats/participants", payload);
   return data;
 }

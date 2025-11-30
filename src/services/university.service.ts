@@ -1,4 +1,4 @@
-import { academicApi, storageApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface UniversityResponse {
   idUniversity: number;
@@ -13,14 +13,14 @@ export interface UniversityResponse {
 
 // === Obtener universidad (requiere token) ===
 export async function getUniversityById(id: number): Promise<UniversityResponse> {
-  const { data } = await academicApi.get(`/universities/${id}`);
+  const { data } = await api.get(`/universities/${id}`);
   return data;
 }
 
 // === Obtener URL real del logo desde storage-ms ===
 export async function getLogoUrl(uuid: string): Promise<string | null> {
   try {
-    const { data } = await storageApi.get(`/files/${uuid}`);
+    const { data } = await api.get(`/files/${uuid}`);
     return data?.url || null;
   } catch (error) {
     console.error("Error obteniendo logo desde storage-ms:", error);
@@ -34,7 +34,7 @@ export async function uploadUniversityLogo(file: File): Promise<string | null> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const { data } = await storageApi.post("/files/upload", formData, {
+    const { data } = await api.post("/files/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
@@ -47,7 +47,7 @@ export async function uploadUniversityLogo(file: File): Promise<string | null> {
 
 // === Actualizar datos de universidad (academic-ms) ===
 export async function updateUniversity(id: number, payload: Partial<UniversityResponse>) {
-  const { data } = await academicApi.put(`/universities/${id}`, payload);
+  const { data } = await api.put(`/universities/${id}`, payload);
   return data;
 }
 
