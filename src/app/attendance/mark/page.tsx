@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { attendanceApi } from "@/services/api";
+import { api } from "@/services/api";
 
 interface ApiResponse {
   idAttendance?: number;
@@ -51,7 +51,7 @@ export default function AttendanceMarkPage() {
 
         const { latitude, longitude } = position.coords;
 
-        const { data } = await attendanceApi.post<ApiResponse>("/attendances/mark", {
+        const { data } = await api.post<ApiResponse>("/attendances/mark", {
           idStudent: user.idUser,
           idGroupCourse: Number(groupCourse),
           latitude,
