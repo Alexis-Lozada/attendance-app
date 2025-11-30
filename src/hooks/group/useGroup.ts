@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   getGroupsByUniversity,
@@ -30,6 +30,7 @@ interface UserWithImage extends User {
  * - Cambio de estado
  * - Manejo de modal y notificaciones
  * - Carga de datos de tutores y programas
+ * - Actualización de contador de inscripciones
  */
 export function useGroup() {
   const { user } = useAuth();
@@ -300,6 +301,17 @@ export function useGroup() {
     }
   };
 
+  // Incrementar contador de estudiantes inscritos
+  const incrementEnrollmentCount = useCallback((idGroup: number) => {
+    setGroups(prev =>
+      prev.map(g => 
+        g.idGroup === idGroup 
+          ? { ...g, enrollmentCount: (g.enrollmentCount || 0) + 1 } 
+          : g
+      )
+    );
+  }, []);
+
   // Guardar grupo (crear o actualizar)
   const handleSaveGroup = async (data: GroupFormData, idGroup?: number) => {
     if (idGroup) {
@@ -375,6 +387,7 @@ export function useGroup() {
     handleToggleStatus,
     handleEdit,
     handleOpenAdd,
+    incrementEnrollmentCount,
     
     // State
     loading,

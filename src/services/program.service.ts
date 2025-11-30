@@ -1,4 +1,4 @@
-import { academicApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface ProgramResponse {
     idProgram: number;
@@ -11,19 +11,19 @@ export interface ProgramResponse {
 
 // === Obtener todos los programas de una universidad ===
 export async function getProgramsByUniversity(idUniversity: number): Promise<ProgramResponse[]> {
-    const { data } = await academicApi.get(`/programs/university/${idUniversity}`);
+    const { data } = await api.get(`/programs/university/${idUniversity}`);
     return data;
 }
 
 // === Obtener programas activos de una universidad ===
 export async function getActiveProgramsByUniversity(idUniversity: number): Promise<ProgramResponse[]> {
-    const { data } = await academicApi.get(`/programs/university/${idUniversity}/active`);
+    const { data } = await api.get(`/programs/university/${idUniversity}/active`);
     return data;
 }
 
 // === Obtener un programa por ID ===
 export async function getProgramById(id: number): Promise<ProgramResponse> {
-    const { data } = await academicApi.get(`/programs/${id}`);
+    const { data } = await api.get(`/programs/${id}`);
     return data;
 }
 
@@ -35,7 +35,7 @@ export async function createProgram(payload: {
     description: string;
     status: boolean;
 }): Promise<ProgramResponse> {
-    const { data } = await academicApi.post("/programs", payload);
+    const { data } = await api.post("/programs", payload);
     return data;
 }
 
@@ -49,7 +49,7 @@ export async function updateProgram(id: number, payload: {
     status: boolean;
 }): Promise<ProgramResponse> {
     try {
-        const response = await academicApi.put(`/programs/${id}`, payload);
+        const response = await api.put(`/programs/${id}`, payload);
         return response.data;
     } catch (error: any) {
         throw error;
@@ -59,7 +59,7 @@ export async function updateProgram(id: number, payload: {
 // === Actualizar estado de programa ===
 export async function updateProgramStatus(id: number, status: boolean): Promise<any> {
     try {
-        const { data } = await academicApi.put(`/programs/${id}/status?status=${status}`);
+        const { data } = await api.put(`/programs/${id}/status?status=${status}`);
         return data;
     } catch (error: any) {
         throw error;
@@ -69,7 +69,7 @@ export async function updateProgramStatus(id: number, status: boolean): Promise<
 // === Eliminar programa (PERMANENTE) ===
 export async function deleteProgram(id: number): Promise<void> {
     try {
-        const response = await academicApi.delete(`/programs/${id}`);
+        const response = await api.delete(`/programs/${id}`);
         return response.data;
     } catch (error: any) {
         throw error;

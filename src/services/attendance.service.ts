@@ -1,4 +1,4 @@
-import { attendanceApi } from "@/services/api";
+import { api } from "@/services/api";
 
 /** === Interfaces === */
 export interface AttendanceResponse {
@@ -17,7 +17,7 @@ export interface AttendanceResponse {
 export async function getAttendancesByGroupCourse(
   idGroupCourse: number
 ): Promise<AttendanceResponse[]> {
-  const { data } = await attendanceApi.get(
+  const { data } = await api.get(
     `/attendances/group-course/${idGroupCourse}`
   );
   return data;
@@ -27,7 +27,7 @@ export async function getAttendancesByGroupCourse(
 export async function getAttendancesBySchedule(
   idSchedule: number
 ): Promise<AttendanceResponse[]> {
-  const { data } = await attendanceApi.get(`/attendances/schedule/${idSchedule}`);
+  const { data } = await api.get(`/attendances/schedule/${idSchedule}`);
   return data;
 }
 
@@ -35,7 +35,7 @@ export async function getAttendancesBySchedule(
 export async function getAttendancesByStudent(
   idStudent: number
 ): Promise<AttendanceResponse[]> {
-  const { data } = await attendanceApi.get(`/attendances/student/${idStudent}`);
+  const { data } = await api.get(`/attendances/student/${idStudent}`);
   return data;
 }
 
@@ -47,7 +47,7 @@ export async function createAttendance(payload: {
   status: string;
   comments?: string;
 }): Promise<AttendanceResponse> {
-  const { data } = await attendanceApi.post("/attendances", payload);
+  const { data } = await api.post("/attendances", payload);
   return data;
 }
 
@@ -62,11 +62,11 @@ export async function updateAttendance(
     comments?: string;
   }
 ): Promise<AttendanceResponse> {
-  const { data } = await attendanceApi.put(`/attendances/${id}`, payload);
+  const { data } = await api.put(`/attendances/${id}`, payload);
   return data;
 }
 
 /** === Eliminar una asistencia === */
 export async function deleteAttendance(id: number): Promise<void> {
-  await attendanceApi.delete(`/attendances/${id}`);
+  await api.delete(`/attendances/${id}`);
 }

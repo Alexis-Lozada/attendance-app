@@ -1,4 +1,4 @@
-import { usersApi, setTokens, clearTokens } from "@/services/api";
+import { api, setTokens, clearTokens } from "@/services/api";
 import { LoginResponse } from "@/types/auth";
 
 /**
@@ -6,7 +6,7 @@ import { LoginResponse } from "@/types/auth";
  * Usa el microservicio users-ms (puerto 8081)
  */
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
-  const { data } = await usersApi.post<LoginResponse>("/auth/login", { email, password });
+  const { data } = await api.post<LoginResponse>("/auth/login", { email, password });
 
   // Guarda los tokens en localStorage
   setTokens(data.accessToken, data.refreshToken);
@@ -23,7 +23,7 @@ export const logout = async (): Promise<void> => {
 
   try {
     if (refreshToken) {
-      await usersApi.post("/auth/logout", { refreshToken });
+      await api.post("/auth/logout", { refreshToken });
     }
   } catch (error) {
     console.warn("Error al cerrar sesión en backend:", error);

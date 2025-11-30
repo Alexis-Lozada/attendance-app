@@ -1,4 +1,4 @@
-import { attendanceApi } from "@/services/api";
+import { api } from "@/services/api";
 
 // === Interfaces ===
 export interface ScheduleResponse {
@@ -42,7 +42,7 @@ export interface ScheduleGroupRequest {
 export async function getSchedulesByGroup(
   idGroup: number
 ): Promise<GroupCourseScheduleResponse[]> {
-  const { data } = await attendanceApi.get(`/schedules/group/${idGroup}`);
+  const { data } = await api.get(`/schedules/group/${idGroup}`);
   return data;
 }
 
@@ -50,7 +50,7 @@ export async function getSchedulesByGroup(
 export async function createOrUpdateGroupSchedules(
   payload: ScheduleGroupRequest
 ): Promise<GroupCourseScheduleResponse[]> {
-  const { data } = await attendanceApi.post("/schedules/group", payload);
+  const { data } = await api.post("/schedules/group", payload);
   return data;
 }
 
@@ -60,7 +60,7 @@ export async function getClosestSchedule(
   dateTime: string
 ): Promise<ScheduleResponse | null> {
   try {
-    const { data } = await attendanceApi.get(`/schedules/closest`, {
+    const { data } = await api.get(`/schedules/closest`, {
       params: { idGroupCourse, dateTime },
     });
     return data;

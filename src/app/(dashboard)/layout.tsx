@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     "/admin/university": "Universidad",
     "/admin/divisions": "Divisiones",
     "/admin/programs": "Programas Educativos",
-    "/courses": "Cursos",
+    "/admin/courses": "Cursos",
     "/admin/groups": "Grupos",
     "/admin/users": "Usuarios",
     "/schedule": "Horarios",

@@ -56,7 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("user", JSON.stringify(user));
 
-      router.push("/dashboard");
+      // Revisar si hay redirect pendiente (por ejemplo, desde /attendance/mark)
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get("redirect");
+
+      router.push(redirect || "/dashboard");
     } finally {
       setLoading(false);
     }

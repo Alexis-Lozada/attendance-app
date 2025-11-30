@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useCallback } from "react";
 import { 
   Plus, 
   Users, 
@@ -21,7 +22,9 @@ import Toast from "@/components/ui/Toast";
 import Switch from "@/components/ui/Switch";
 import Spinner from "@/components/ui/Spinner";
 import GroupForm from "@/components/groups/GroupForm";
-import { useGroup } from "@/hooks/useGroup";
+import EnrollStudentsModal from "@/components/groups/EnrollStudentsModal";
+import { useGroup } from "@/hooks/group/useGroup";
+import { useEnrollStudents } from "@/hooks/group/useEnrollStudents";
 import { UserRole, RoleLabels } from "@/types/roles";
 import type { GroupWithDetails } from "@/types/group";
 
@@ -59,6 +62,7 @@ export default function GroupsPage() {
     handleToggleStatus,
     handleEdit,
     handleOpenAdd,
+    incrementEnrollmentCount,
     
     // State
     loading,
@@ -67,17 +71,31 @@ export default function GroupsPage() {
     userRole,
   } = useGroup();
 
+  const {
+    isModalOpen: isEnrollModalOpen,
+    selectedGroup: enrollSelectedGroup,
+    enrolledStudents,
+    availableStudents,
+    loading: enrollLoading,
+    openModal: openEnrollModal,
+    closeModal: closeEnrollModal,
+    enrollStudent,
+    removeStudent,
+    setOnEnrollmentChange,
+    toast: enrollToast,
+    setToast: setEnrollToast,
+  } = useEnrollStudents();
+
+  // Configurar callback para actualizar el contador de inscripciones
+  useEffect(() => {
+    setOnEnrollmentChange(incrementEnrollmentCount);
+  }, [setOnEnrollmentChange, incrementEnrollmentCount]);
+
   if (loading) return <Spinner text="Cargando grupos académicos..." fullScreen />;
 
-  // Handle register students (placeholder for now)
+  // Handle register students
   const handleRegisterStudents = (group: GroupWithDetails) => {
-    // TODO: Implement student registration functionality
-    console.log("Registrar estudiantes para el grupo:", group.groupCode);
-    setToast({
-      title: "Funcionalidad en desarrollo",
-      description: "La funcionalidad de registro de estudiantes estará disponible próximamente.",
-      type: "success",
-    });
+    openEnrollModal(group);
   };
 
   // Table columns configuration
@@ -87,29 +105,26 @@ export default function GroupsPage() {
       label: "Grupo", 
       icon: <Hash size={16} />,
       render: (item) => (
-        <div className="min-w-[100px]">
+        <div className="min-w-[120px]">
           <p className="font-medium text-gray-900">{item.groupCode}</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            {item.programCode} • {item.semester}°
+            Semestre {item.semester}°
           </p>
         </div>
       )
     },
     {
       key: "program",
-      label: "Programa Educativo",
+      label: "Programa",
       icon: <GraduationCap size={16} />,
       render: (item) => (
-        <div className="max-w-[200px]">
+        <div className="min-w-[140px]">
           <p className="text-sm text-gray-900 font-medium">{item.programCode}</p>
           <p className="text-xs text-gray-500 truncate" title={item.programName}>
-            {item.programName}
+            {item.programName && item.programName.length > 25 
+              ? `${item.programName.substring(0, 25)}...` 
+              : item.programName}
           </p>
-          {item.divisionName && (
-            <p className="text-xs text-gray-400 truncate mt-0.5" title={`División: ${item.divisionName}`}>
-              División: {item.divisionName}
-            </p>
-          )}
         </div>
       )
     },
@@ -118,7 +133,7 @@ export default function GroupsPage() {
       label: "Tutor",
       icon: <User size={16} />,
       render: (item) => (
-        <div className="flex items-center gap-3 min-w-[180px]">
+        <div className="flex items-center gap-2 min-w-[150px]">
           {item.tutorImage ? (
             <img
               src={item.tutorImage}
@@ -134,34 +149,22 @@ export default function GroupsPage() {
             <p className="text-sm font-medium text-gray-900 truncate">
               {item.tutorName || "Sin asignar"}
             </p>
-            {item.tutorName && item.tutorName !== "Sin asignar" && (
-              <p className="text-xs text-gray-500">Tutor</p>
-            )}
           </div>
         </div>
       )
     },
     {
-      key: "enrollment",
-      label: "Estudiantes",
-      icon: <BookOpen size={16} />,
-      align: "center",
-      render: (item) => (
-        <div className="text-center">
-          <span className="text-sm font-medium text-gray-900">
-            {item.enrollmentCount || 0}
-          </span>
-          <p className="text-xs text-gray-500">inscritos</p>
-        </div>
-      )
-    },
-    {
-      key: "academicYear",
-      label: "Período",
+      key: "info",
+      label: "Info",
       icon: <Calendar size={16} />,
       align: "center",
       render: (item) => (
-        <span className="text-sm text-gray-700">{item.academicYear}</span>
+        <div className="text-center min-w-[100px]">
+          <p className="text-sm font-medium text-gray-900">
+            {item.enrollmentCount || 0} estudiantes
+          </p>
+          <p className="text-xs text-gray-500">{item.academicYear}</p>
+        </div>
       )
     },
     {
@@ -191,10 +194,10 @@ export default function GroupsPage() {
           </button>
           <button
             onClick={() => handleRegisterStudents(item)}
-            className="flex items-center gap-2 text-sm text-white bg-primary rounded-md px-3 py-1.5 hover:bg-primary/90 transition cursor-pointer"
+            className="flex items-center gap-2 text-sm text-primary border border-primary rounded-md px-3 py-1.5 hover:bg-primary hover:text-white transition cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            Estudiantes
+            Inscribir
           </button>
         </div>
       ),
@@ -210,6 +213,15 @@ export default function GroupsPage() {
           description={toast.description}
           type={toast.type}
           onClose={() => setToast(null)}
+        />
+      )}
+      
+      {enrollToast && (
+        <Toast
+          title={enrollToast.title}
+          description={enrollToast.description}
+          type={enrollToast.type}
+          onClose={() => setEnrollToast(null)}
         />
       )}
 
@@ -420,6 +432,17 @@ export default function GroupsPage() {
           loading={formLoading}
         />
       </Modal>
+
+      {/* Modal for enrolling students */}
+      <EnrollStudentsModal
+        isOpen={isEnrollModalOpen}
+        onClose={closeEnrollModal}
+        group={enrollSelectedGroup}
+        enrolledStudents={enrolledStudents}
+        availableStudents={availableStudents}
+        onEnrollStudent={enrollStudent}
+        loading={enrollLoading}
+      />
     </>
   );
 }

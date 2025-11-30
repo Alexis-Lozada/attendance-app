@@ -1,4 +1,4 @@
-import { academicApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface DivisionResponse {
     idDivision: number;
@@ -12,19 +12,19 @@ export interface DivisionResponse {
 
 // === Obtener todas las divisiones de una universidad ===
 export async function getDivisionsByUniversity(idUniversity: number): Promise<DivisionResponse[]> {
-    const { data } = await academicApi.get(`/divisions/university/${idUniversity}`);
+    const { data } = await api.get(`/divisions/university/${idUniversity}`);
     return data;
 }
 
 // === Obtener divisiones activas de una universidad ===
 export async function getActiveDivisionsByUniversity(idUniversity: number): Promise<DivisionResponse[]> {
-    const { data } = await academicApi.get(`/divisions/university/${idUniversity}/active`);
+    const { data } = await api.get(`/divisions/university/${idUniversity}/active`);
     return data;
 }
 
 // === Obtener una división por ID ===
 export async function getDivisionById(id: number): Promise<DivisionResponse> {
-    const { data } = await academicApi.get(`/divisions/${id}`);
+    const { data } = await api.get(`/divisions/${id}`);
     return data;
 }
 
@@ -37,7 +37,7 @@ export async function createDivision(payload: {
     description: string;
     status: boolean;
 }): Promise<DivisionResponse> {
-    const { data } = await academicApi.post("/divisions", payload);
+    const { data } = await api.post("/divisions", payload);
     return data;
 }
 
@@ -54,7 +54,7 @@ export async function updateDivision(id: number, payload: {
     status: boolean;
 }): Promise<DivisionResponse> {
     try {
-        const response = await academicApi.put(`/divisions/${id}`, payload);
+        const response = await api.put(`/divisions/${id}`, payload);
         return response.data;
     } catch (error: any) {
         throw error;
@@ -66,7 +66,7 @@ export async function updateDivision(id: number, payload: {
 export async function updateDivisionStatus(id: number, status: boolean): Promise<any> {
     try {
         // CAMBIO: Usar PUT en lugar de PATCH
-        const { data } = await academicApi.put(`/divisions/${id}/status?status=${status}`);
+        const { data } = await api.put(`/divisions/${id}/status?status=${status}`);
         return data;
     } catch (error: any) {
         throw error;
@@ -76,7 +76,7 @@ export async function updateDivisionStatus(id: number, status: boolean): Promise
 // === Eliminar división (PERMANENTE) ===
 export async function deleteDivision(id: number): Promise<void> {
     try {
-        const response = await academicApi.delete(`/divisions/${id}`); // Sin /soft
+        const response = await api.delete(`/divisions/${id}`); // Sin /soft
         return response.data;
     } catch (error: any) {
         throw error;

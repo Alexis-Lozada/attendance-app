@@ -1,12 +1,23 @@
 "use client";
 
+import { useMemo } from "react";
 import { List, User } from "lucide-react";
 import { AttendanceResponse } from "@/services/attendance.service";
+import {
+  buildStudents,
+  buildAttendanceMap,
+  buildMonthSegments,
+  getStudentStatsForCalendar,
+  getCellLetterForCalendar,
+  type StudentInfo,
+} from "@/utils/attendance/AttendanceTableUtils";
+import { useStudentImageUrls } from "@/hooks/attendance/useStudentImageUrls";
 
+// === Tipos que vienen del hook useAttendanceCalendar ===
 interface CalendarDay {
   label: string;      // L, M, M, J, V
-  dayNumber: number;  // 6, 7, 8, ...
-  date: string;       // "2025-01-06" (ISO sin hora)
+  date: string;       // "2025-11-06" (ISO sin hora)
+  dayNumber: number;  // 6, 7, 8...
 }
 
 interface CalendarWeek {
@@ -15,119 +26,57 @@ interface CalendarWeek {
 }
 
 interface AttendanceTableProps {
-  monthLabel: string;
+  monthLabel: string; // (ya no lo usamos directamente)
   weeks: CalendarWeek[];
   attendances: AttendanceResponse[];
 }
 
-type NormalizedStatus = "PRESENT" | "ABSENT" | "LATE" | "JUSTIFIED" | "UNKNOWN";
-
-function normalizeStatus(status: string): NormalizedStatus {
-  if (!status) return "UNKNOWN";
-  const s = status.toUpperCase();
-
-  if (["PRESENT", "P"].includes(s)) return "PRESENT";
-  if (["ABSENT", "A", "FALTA", "FALTÓ"].includes(s)) return "ABSENT";
-  if (["LATE", "TARDY", "T", "TARDANZA"].includes(s)) return "LATE";
-  if (["JUSTIFIED", "J", "JUSTIFICADA", "JUSTIFICADO"].includes(s))
-    return "JUSTIFIED";
-
-  return "UNKNOWN";
-}
-
-interface StudentRow {
-  idStudent: number;
-  studentName: string;
-  enrollmentNumber: string;
-  profileImage?: string;
-  // attendanceDate (YYYY-MM-DD) -> registro
-  attendancesByDate: Record<string, AttendanceResponse | undefined>;
-  totalAttendance: number;
-  attendancePercent: number;
-  absences: number;
-  tardiness: number;
-  justifications: number;
-}
+// Columnas de resumen (headers escritos de lado)
+const SUMMARY_COLUMNS = [
+  { key: "totalAttendance", label: "ASISTENCIA" },
+  { key: "attendancePercent", label: "% DE ASISTENCIA" },
+  { key: "absences", label: "FALTAS" },
+  { key: "tardiness", label: "TARDANZAS" },
+  { key: "justifications", label: "JUSTIFICACIONES" },
+] as const;
 
 export default function AttendanceTable({
-  monthLabel,
+  monthLabel, // eslint-disable-line @typescript-eslint/no-unused-vars
   weeks,
   attendances,
 }: AttendanceTableProps) {
-  // Si no hay calendario todavía, mostramos mensaje vacío
-  const hasCalendar = weeks && weeks.length > 0;
-
-  // =========================
-  //  Construir filas por alumno
-  // =========================
-  const sessionsDates: string[] = hasCalendar
-    ? weeks.flatMap((w) => w.days.map((d) => d.date))
-    : [];
-
-  const totalSessions = sessionsDates.length;
-
-  const studentsMap = new Map<number, StudentRow>();
-
-  attendances.forEach((a) => {
-    const dateOnly = a.attendanceDate.substring(0, 10); // "YYYY-MM-DD"
-    const normalized = normalizeStatus(a.status);
-
-    if (!studentsMap.has(a.idStudent)) {
-      studentsMap.set(a.idStudent, {
-        idStudent: a.idStudent,
-        studentName: a.studentName || "Sin nombre",
-        enrollmentNumber: a.enrollmentNumber || "Sin matrícula",
-        profileImage: a.profileImage,
-        attendancesByDate: {},
-        totalAttendance: 0,
-        attendancePercent: 0,
-        absences: 0,
-        tardiness: 0,
-        justifications: 0,
-      });
-    }
-
-    const row = studentsMap.get(a.idStudent)!;
-
-    // Guardar registro por fecha
-    row.attendancesByDate[dateOnly] = a;
-
-    // Contabilizar por tipo
-    switch (normalized) {
-      case "PRESENT":
-        row.totalAttendance += 1;
-        break;
-      case "JUSTIFIED":
-        // Si quieres que la justificada cuente como asistencia, descomenta:
-        // row.totalAttendance += 1;
-        row.justifications += 1;
-        break;
-      case "ABSENT":
-        row.absences += 1;
-        break;
-      case "LATE":
-        row.tardiness += 1;
-        break;
-      default:
-        break;
-    }
-  });
-
-  // Calcular % de asistencia por alumno
-  const studentRows: StudentRow[] = Array.from(studentsMap.values()).map(
-    (row) => {
-      if (totalSessions > 0) {
-        row.attendancePercent = Math.round(
-          (row.totalAttendance / totalSessions) * 100
-        );
-      } else {
-        row.attendancePercent = 0;
-      }
-      return row;
-    }
+  // ==============================
+  //  Alumnos únicos
+  // ==============================
+  const students: StudentInfo[] = useMemo(
+    () => buildStudents(attendances),
+    [attendances]
   );
 
-  const totalStudents = studentRows.length;
+  const totalStudents = students.length;
+
+  // ==============================
+  //  Mapa alumno+fecha y días del calendario
+  // ==============================
+  const attendanceByStudentAndDate = useMemo(
+    () => buildAttendanceMap(attendances),
+    [attendances]
+  );
+
+  const allCalendarDays = useMemo(
+    () => weeks.flatMap((w) => w.days),
+    [weeks]
+  );
+
+  const monthSegments = useMemo(
+    () => buildMonthSegments(allCalendarDays),
+    [allCalendarDays]
+  );
+
+  // ==============================
+  //  Imágenes de alumnos (UUID → URL)
+  // ==============================
+  const imageUrls = useStudentImageUrls(students);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -148,74 +97,47 @@ export default function AttendanceTable({
         </div>
       </div>
 
-      {/* Tabla con scroll horizontal solo en la tabla */}
-      {hasCalendar && totalStudents > 0 ? (
-        <div className="w-full max-w-full overflow-x-auto rounded-md border border-gray-200">
+      {/* Tabla con scroll horizontal SOLO en la tabla */}
+      {totalStudents > 0 ? (
+        <div className="w-full rounded-md border border-gray-200 overflow-x-auto">
           <div className="min-w-[900px]">
             <table className="w-full text-[13px] text-left text-gray-700">
               <thead>
-                {/* Fila 0: Mes + columnas de resumen laterales */}
+                {/* Fila 0: Meses + columnas de resumen laterales */}
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-2 text-left text-[12px] font-medium text-gray-700 border-r border-gray-200 whitespace-nowrap">
                     Alumno
                   </th>
 
-                  <th
-                    className="px-5 py-2 text-center text-[12px] font-semibold text-gray-900"
-                    colSpan={sessionsDates.length}
-                  >
-                    {monthLabel || "CALENDARIO"}
-                  </th>
+                  {monthSegments.map((segment, idx) => (
+                    <th
+                      key={`${segment.label}-${idx}`}
+                      className="px-5 py-2 text-center text-[12px] font-semibold text-gray-900 border-l border-gray-200"
+                      colSpan={segment.colSpan}
+                    >
+                      {segment.label}
+                    </th>
+                  ))}
 
-                  {/* Columnas resumen, texto vertical */}
-                  <th
-                    rowSpan={4}
-                    className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
-                  >
-                    <span className="inline-block [writing-mode:vertical-rl] rotate-180">
-                      ASISTENCIA
-                    </span>
-                  </th>
-                  <th
-                    rowSpan={4}
-                    className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
-                  >
-                    <span className="inline-block [writing-mode:vertical-rl] rotate-180">
-                      % DE ASISTENCIA
-                    </span>
-                  </th>
-                  <th
-                    rowSpan={4}
-                    className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
-                  >
-                    <span className="inline-block [writing-mode:vertical-rl] rotate-180">
-                      FALTAS
-                    </span>
-                  </th>
-                  <th
-                    rowSpan={4}
-                    className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
-                  >
-                    <span className="inline-block [writing-mode:vertical-rl] rotate-180">
-                      TARDANZAS
-                    </span>
-                  </th>
-                  <th
-                    rowSpan={4}
-                    className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
-                  >
-                    <span className="inline-block [writing-mode:vertical-rl] rotate-180">
-                      JUSTIFICACIONES
-                    </span>
-                  </th>
+                  {SUMMARY_COLUMNS.map((col) => (
+                    <th
+                      key={col.key}
+                      rowSpan={4}
+                      className="px-2 py-2 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200 align-middle"
+                    >
+                      <span className="inline-block [writing-mode:vertical-rl] rotate-180">
+                        {col.label}
+                      </span>
+                    </th>
+                  ))}
                 </tr>
 
                 {/* Fila 1: Semanas */}
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-2 text-left text-[12px] font-medium text-gray-700 border-r border-gray-200" />
-                  {weeks.map((week, wi) => (
+                  {weeks.map((week, i) => (
                     <th
-                      key={`week-${wi}`}
+                      key={`week-${i}`}
                       className="px-2 py-1 text-center text-[11px] font-medium text-gray-700 border-l border-gray-200"
                       colSpan={week.days.length}
                     >
@@ -256,99 +178,103 @@ export default function AttendanceTable({
               </thead>
 
               <tbody>
-                {studentRows.map((row) => (
-                  <tr
-                    key={row.idStudent}
-                    className="border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Alumno */}
-                    <td className="px-5 py-[10px] text-gray-700 border-r border-gray-200">
-                      <div className="flex items-center gap-3">
-                        {row.profileImage ? (
-                          <img
-                            src={row.profileImage}
-                            alt={row.studentName}
-                            className="w-8 h-8 aspect-square rounded-md object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 aspect-square rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0">
-                            <User className="w-4 h-4 text-gray-500" />
+                {students.map((student) => {
+                  const stats = getStudentStatsForCalendar(
+                    student.idStudent,
+                    allCalendarDays,
+                    attendanceByStudentAndDate
+                  );
+                  const imgSrc = imageUrls[student.idStudent];
+
+                  return (
+                    <tr
+                      key={student.idStudent}
+                      className="border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors"
+                    >
+                      {/* Alumno */}
+                      <td className="px-5 py-[10px] text-gray-700 border-r border-gray-200">
+                        <div className="flex items-center gap-3">
+                          {imgSrc ? (
+                            <img
+                              src={imgSrc}
+                              alt={student.studentName}
+                              className="w-8 h-8 aspect-square rounded-md object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 aspect-square rounded-md bg-gray-200 flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-gray-500" />
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                              {student.studentName}
+                            </p>
+                            <p className="text-xs text-gray-500 whitespace-nowrap">
+                              Matrícula: {student.enrollmentNumber}
+                            </p>
                           </div>
-                        )}
-                        <div className="flex flex-col">
-                          <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                            {row.studentName}
-                          </p>
-                          <p className="text-xs text-gray-500 whitespace-nowrap">
-                            Matrícula: {row.enrollmentNumber}
-                          </p>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Celdas de días */}
-                    {weeks.flatMap((week, wi) =>
-                      week.days.map((day, di) => {
-                        const rec =
-                          row.attendancesByDate[day.date] || undefined;
-                        const norm = rec
-                          ? normalizeStatus(rec.status)
-                          : "UNKNOWN";
+                      {/* Celdas de días: PRESENT = celda completa en bg-primary */}
+                      {weeks.flatMap((week, wi) =>
+                        week.days.map((day, di) => {
+                          const letter = getCellLetterForCalendar(
+                            student.idStudent,
+                            day.date,
+                            attendanceByStudentAndDate
+                          );
+                          const isPresent = letter === "P";
 
-                        let symbol = "";
-                        switch (norm) {
-                          case "PRESENT":
-                            symbol = "P";
-                            break;
-                          case "ABSENT":
-                            symbol = "A";
-                            break;
-                          case "LATE":
-                            symbol = "T";
-                            break;
-                          case "JUSTIFIED":
-                            symbol = "J";
-                            break;
-                          default:
-                            symbol = "";
-                            break;
-                        }
+                          let cellClasses =
+                            "px-2 py-2 text-center text-xs border-l border-gray-200";
+                          let cellContent: React.ReactNode = null;
 
-                        return (
-                          <td
-                            key={`cell-${row.idStudent}-${wi}-${di}`}
-                            className="px-2 py-2 text-center text-xs text-gray-700 border-l border-gray-200"
-                          >
-                            {symbol ? (
-                              <span className="inline-block min-w-[14px]">
-                                {symbol}
+                          if (isPresent) {
+                            cellClasses += " bg-primary text-white";
+                          } else if (letter) {
+                            cellClasses += " text-gray-700";
+                            cellContent = (
+                              <span className="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold border border-gray-300 rounded">
+                                {letter}
                               </span>
-                            ) : (
-                              <span className="inline-block w-3 h-3 rounded-full border border-gray-300 bg-white" />
-                            )}
-                          </td>
-                        );
-                      })
-                    )}
+                            );
+                          } else {
+                            cellContent = (
+                              <span className="inline-block w-3 h-3 rounded-full border border-gray-200 bg-white" />
+                            );
+                          }
 
-                    {/* Columnas de resumen */}
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
-                      {row.totalAttendance}
-                    </td>
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
-                      {row.attendancePercent}%
-                    </td>
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
-                      {row.absences}
-                    </td>
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
-                      {row.tardiness}
-                    </td>
-                    <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
-                      {row.justifications}
-                    </td>
-                  </tr>
-                ))}
+                          return (
+                            <td
+                              key={`cell-${student.idStudent}-${wi}-${di}`}
+                              className={cellClasses}
+                            >
+                              {cellContent}
+                            </td>
+                          );
+                        })
+                      )}
+
+                      {/* Columnas de resumen al final */}
+                      <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
+                        {stats.totalAttendance}
+                      </td>
+                      <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
+                        {stats.attendancePercent}%
+                      </td>
+                      <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
+                        {stats.absences}
+                      </td>
+                      <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
+                        {stats.tardiness}
+                      </td>
+                      <td className="px-3 py-2 text-center text-xs text-gray-700 border-l border-gray-200">
+                        {stats.justifications}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,17 +1,26 @@
 "use client";
 
 import { Users, BookOpen, ListOrdered } from "lucide-react";
+
 import FilterSelect from "@/components/attendance/FilterSelect";
+import AttendanceTable from "@/components/attendance/AttendanceTable";
+
 import { useAttendanceFilters } from "@/hooks/attendance/useAttendanceFilters";
 import { useCourseSchedule } from "@/hooks/attendance/useCourseSchedule";
+import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
+import { useRealtimeAttendance } from "@/hooks/attendance/useAttendancesRealtime";
+import { useAttendanceSessionStart } from "@/hooks/attendance/useAttendanceSessionStart";
+
 import {
   formatTimeAMPM,
   formatClassDateEs,
   isNowWithinClass,
 } from "@/utils/attendance/DateUtils";
-import AttendanceTable from "@/components/attendance/AttendanceTable";
-import { useAttendanceCalendar } from "@/hooks/attendance/useAttendanceCalendar";
-import { useRealtimeAttendance } from "@/hooks/attendance/useAttendancesRealtime";
+
+import { useAuth } from "@/context/AuthContext";
+import Toast from "@/components/ui/Toast";
+
+import { UserRole } from "@/types/roles";
 
 export default function AttendancePage() {
   const {
@@ -20,14 +29,16 @@ export default function AttendancePage() {
     groups,
     courses,
     modules,
-    modulesMeta, // info completa de módulos
-    selectedGroup, // idGroup
-    selectedCourse, // idGroupCourse
-    selectedModule, // idModule
+    modulesMeta,
+    selectedGroup,
+    selectedCourse,
+    selectedModule,
     setSelectedGroup,
     setSelectedCourse,
     setSelectedModule,
   } = useAttendanceFilters();
+
+  const { user } = useAuth();
 
   const groupInfo = groups.find((g) => g.value === selectedGroup);
   const puedePasarLista = groupInfo?.puedePasarLista ?? false;
@@ -40,8 +51,8 @@ export default function AttendancePage() {
   const moduleInfo = modulesMeta.find(
     (m) => String(m.idModule) === selectedModule
   );
-  const moduleStartDate = moduleInfo?.startDate ?? null; // "YYYY-MM-DD"
-  const moduleEndDate = moduleInfo?.endDate ?? null; // "YYYY-MM-DD"
+  const moduleStartDate = moduleInfo?.startDate ?? null;
+  const moduleEndDate = moduleInfo?.endDate ?? null;
 
   // Horario real del backend (para botón "Pasar Asistencia")
   const { schedule, loadingSchedule } = useCourseSchedule(
@@ -51,34 +62,44 @@ export default function AttendancePage() {
 
   const canMarkNow =
     !!schedule &&
-    isNowWithinClass(
-      schedule.dayOfWeek,
-      schedule.startTime,
-      schedule.endTime
-    );
+    isNowWithinClass(schedule.dayOfWeek, schedule.startTime, schedule.endTime);
 
-  const isButtonEnabled = puedePasarLista && canMarkNow;
-
-  // Calendario dinámico para la tabla
+  // Lógica para iniciar sesión de asistencia
+  const idGroupCourseNumber = selectedCourse ? Number(selectedCourse) : null;
   const {
-    weeks,
-    monthLabel,
-    loadingCalendar,
-    calendarError,
-  } = useAttendanceCalendar({
-    idGroup: selectedGroup,
-    idGroupCourse: selectedCourse,
-    moduleStartDate,
-    moduleEndDate,
+    startingSession,
+    toast,
+    clearToast,
+    start,
+    canStart,
+    loadingCanStart,
+  } = useAttendanceSessionStart({
+    idGroupCourse: idGroupCourseNumber,
+    idSchedule: schedule?.idSchedule ?? null,
+    idProfessor: user?.idUser ?? null,
   });
 
-  // 🔥 Asistencias en tiempo real para el idGroupCourse dentro del rango del módulo
-  const idGroupCourseNumber = selectedCourse
-    ? Number(selectedCourse)
-    : undefined;
+  const isButtonEnabled =
+    puedePasarLista &&
+    canMarkNow &&
+    !startingSession &&
+    !loadingCanStart &&
+    canStart;
 
+  const showPassButton = user?.role !== UserRole.STUDENT;
+
+  // Calendario dinámico para la tabla
+  const { weeks, monthLabel, loadingCalendar, calendarError } =
+    useAttendanceCalendar({
+      idGroup: selectedGroup,
+      idGroupCourse: selectedCourse,
+      moduleStartDate,
+      moduleEndDate,
+    });
+
+  // Asistencias en tiempo real para el idGroupCourse dentro del rango del módulo
   const { attendances } = useRealtimeAttendance(
-    idGroupCourseNumber,
+    idGroupCourseNumber ?? undefined,
     moduleStartDate ?? undefined,
     moduleEndDate ?? undefined
   );
@@ -118,8 +139,13 @@ export default function AttendancePage() {
       {/* Columna derecha */}
       <div className="flex-1 min-w-0 space-y-6">
         {/* Tarjeta de info */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
+        <div
+          className={`bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-start md:items-center gap-4 ${
+            showPassButton ? "md:justify-between" : "md:justify-start"
+          }`}
+        >
+          {/* Bloque info (cuando no hay botón, ocupa la mitad) */}
+          <div className={showPassButton ? "" : "md:flex-1 md:min-w-0"}>
             <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2 mb-1">
               {groupLabel}
               {esTutor && (
@@ -139,7 +165,12 @@ export default function AttendancePage() {
           </div>
 
           {puedePasarLista && (
-            <div className="md:border-l md:border-gray-200 md:pl-4">
+            // Bloque hora (cuando no hay botón, ocupa la otra mitad)
+            <div
+              className={`md:border-l md:border-gray-200 md:pl-4 ${
+                showPassButton ? "" : "md:flex-1 md:min-w-0"
+              }`}
+            >
               {loadingSchedule ? (
                 <p className="text-sm text-gray-700">Cargando horario...</p>
               ) : schedule ? (
@@ -164,22 +195,23 @@ export default function AttendancePage() {
             </div>
           )}
 
-          <button
-            disabled={!isButtonEnabled}
-            className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
-              isButtonEnabled
-                ? "hover:bg-primary/90 cursor-pointer"
-                : "opacity-60 cursor-not-allowed"
-            }`}
-          >
-            Pasar Asistencia
-          </button>
+          {showPassButton && (
+            <button
+              onClick={start}
+              disabled={!isButtonEnabled}
+              className={`text-sm font-medium rounded-md px-4 py-2 transition bg-primary text-white ${
+                isButtonEnabled
+                  ? "hover:bg-primary/90 cursor-pointer"
+                  : "opacity-60 cursor-not-allowed"
+              }`}
+            >
+              {startingSession ? "Iniciando..." : "Pasar Asistencia"}
+            </button>
+          )}
         </div>
 
         {/* Mensajes de estado del calendario */}
-        {calendarError && (
-          <p className="text-xs text-red-500">{calendarError}</p>
-        )}
+        {calendarError && <p className="text-xs text-red-500">{calendarError}</p>}
 
         {/* Tabla de asistencias con datos reales */}
         {loadingCalendar ? (
@@ -191,6 +223,16 @@ export default function AttendancePage() {
             monthLabel={monthLabel}
             weeks={weeks}
             attendances={attendances}
+          />
+        )}
+
+        {/* Toast */}
+        {toast && (
+          <Toast
+            title={toast.title}
+            description={toast.description}
+            type={toast.type}
+            onClose={clearToast}
           />
         )}
       </div>

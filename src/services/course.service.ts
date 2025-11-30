@@ -1,4 +1,4 @@
-import { academicApi } from "@/services/api";
+import { api } from "@/services/api";
 
 export interface CourseResponse {
   idCourse: number;
@@ -25,7 +25,7 @@ export async function getCoursesByUniversity(
   if (active !== undefined) params.active = active;
   if (semester) params.semester = semester;
 
-  const { data } = await academicApi.get(`/courses/university/${idUniversity}`, { params });
+  const { data } = await api.get(`/courses/university/${idUniversity}`, { params });
   return data;
 }
 
@@ -39,7 +39,7 @@ export async function getCoursesByDivision(
   if (active !== undefined) params.active = active;
   if (semester) params.semester = semester;
 
-  const { data } = await academicApi.get(`/courses/division/${idDivision}`, { params });
+  const { data } = await api.get(`/courses/division/${idDivision}`, { params });
   return data;
 }
 
@@ -52,7 +52,7 @@ export async function createCourse(payload: {
   semester?: string | null;
   status: boolean;
 }): Promise<CourseResponse> {
-  const { data } = await academicApi.post("/courses", payload);
+  const { data } = await api.post("/courses", payload);
   return data;
 }
 
@@ -69,13 +69,13 @@ export async function updateCourse(
     status: boolean;
   }
 ): Promise<CourseResponse> {
-  const { data } = await academicApi.put(`/courses/${idCourse}`, payload);
+  const { data } = await api.put(`/courses/${idCourse}`, payload);
   return data;
 }
 
 // === Cambiar estatus del curso (activar/desactivar) ===
 export async function updateCourseStatus(idCourse: number, status: boolean): Promise<CourseResponse> {
-  const { data } = await academicApi.put(`/courses/${idCourse}/status`, null, {
+  const { data } = await api.put(`/courses/${idCourse}/status`, null, {
     params: { status },
   });
   return data;
@@ -92,13 +92,13 @@ export interface CourseModuleResponse {
 
 // === Obtener módulos por curso ===
 export async function getModulesByCourse(idCourse: number): Promise<CourseModuleResponse[]> {
-  const { data } = await academicApi.get(`/course-modules/course/${idCourse}`);
+  const { data } = await api.get(`/course-modules/course/${idCourse}`);
   return data;
 }
 
 // === Obtener módulo por ID ===
 export async function getModuleById(idModule: number): Promise<CourseModuleResponse> {
-  const { data } = await academicApi.get(`/course-modules/${idModule}`);
+  const { data } = await api.get(`/course-modules/${idModule}`);
   return data;
 }
 
@@ -110,7 +110,7 @@ export async function createModule(payload: {
   startDate: string;
   endDate: string;
 }): Promise<CourseModuleResponse> {
-  const { data } = await academicApi.post("/course-modules", payload);
+  const { data } = await api.post("/course-modules", payload);
   return data;
 }
 
@@ -125,11 +125,11 @@ export async function updateModule(
     endDate: string;
   }
 ): Promise<CourseModuleResponse> {
-  const { data } = await academicApi.put(`/course-modules/${idModule}`, payload);
+  const { data } = await api.put(`/course-modules/${idModule}`, payload);
   return data;
 }
 
 // === Eliminar módulo ===
 export async function deleteModule(idModule: number): Promise<void> {
-  await academicApi.delete(`/course-modules/${idModule}`);
+  await api.delete(`/course-modules/${idModule}`);
 }
