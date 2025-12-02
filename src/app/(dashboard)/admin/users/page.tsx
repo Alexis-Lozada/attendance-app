@@ -10,7 +10,8 @@ import {
   SlidersHorizontal,
   MoreVertical, 
   Edit2,
-  User as UserIcon
+  User as UserIcon,
+  Plus
 } from "lucide-react";
 
 import Table, { TableColumn } from "@/components/ui/Table";
@@ -35,6 +36,7 @@ export default function UsersPage() {
     filteredUsers,
     totalUsers,
     availableRoles,
+    divisions,
     
     // Pagination
     currentPage,
@@ -51,10 +53,11 @@ export default function UsersPage() {
     isModalOpen,
     setIsModalOpen,
     selectedUser,
+    setSelectedUser,
     formLoading,
     
     // Actions
-    handleUpdateUser,
+    handleSaveUser,
     handleEdit,
     handleToggleStatus,
     
@@ -64,6 +67,9 @@ export default function UsersPage() {
     setToast,
     userRole,
     canEditUsers,
+    isAdmin,
+    isCoordinator,
+    userDivision,
   } = useUser();
 
   if (loading) return <Spinner text="Cargando usuarios del sistema..." fullScreen />;
@@ -172,9 +178,10 @@ export default function UsersPage() {
           <button
             title="Editar usuario"
             onClick={() => handleEdit(item)}
-            className="text-gray-600 hover:text-primary transition"
+            className="flex items-center gap-2 text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-100 transition cursor-pointer"
           >
-            <Edit2 size={15} />
+            <Edit2 className="w-4 h-4" />
+            Editar
           </button>
         </div>
       ),
@@ -217,6 +224,19 @@ export default function UsersPage() {
             )}
           </p>
         </div>
+
+        {canEditUsers && (
+          <button
+            onClick={() => {
+              setSelectedUser(null);
+              setIsModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-5 py-2.5 bg-primary text-white rounded-lg flex items-center justify-center gap-2 hover:brightness-95 text-sm font-medium transition"
+          >
+            <Plus size={18} />
+            Agregar usuario
+          </button>
+        )}
       </header>
 
       {/* Role Filters */}
@@ -237,7 +257,7 @@ export default function UsersPage() {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                Todos los roles ({totalUsers})
+                Todos los roles
               </button>
               
               {availableRoles.map((role) => (
@@ -250,7 +270,7 @@ export default function UsersPage() {
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  {RoleLabels[role as UserRole] || role} ({roleStats[role] || 0})
+                  {RoleLabels[role as UserRole] || role}
                 </button>
               ))}
             </div>
@@ -355,19 +375,19 @@ export default function UsersPage() {
       {/* Modal for edit user */}
       {canEditUsers && (
         <Modal
-          title={selectedUser ? "Editar usuario" : "Información de usuario"}
+          title={selectedUser ? "Editar usuario" : "Agregar nuevo usuario"}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         >
           <UserForm
             initialData={selectedUser}
-            onSave={(data: Partial<User>, idUser?: number) => {
-              if (idUser) {
-                handleUpdateUser(idUser, data);
-              }
-            }}
+            onSave={handleSaveUser}
             onCancel={() => setIsModalOpen(false)}
             loading={formLoading}
+            isAdmin={isAdmin}
+            isCoordinator={isCoordinator}
+            userDivision={userDivision}
+            divisions={divisions}
           />
         </Modal>
       )}

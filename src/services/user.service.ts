@@ -18,6 +18,12 @@ export async function getUserById(idUser: number): Promise<User> {
   return data;
 }
 
+// === Crear un nuevo usuario ===
+export async function createUser(payload: Partial<User> & { password: string }): Promise<User> {
+  const { data } = await api.post(`/user`, payload);
+  return data;
+}
+
 // === Actualizar información del perfil ===
 export async function updateUserProfile(idUser: number, payload: Partial<User>): Promise<User> {
   const { data } = await api.put(`/user/${idUser}`, payload);
