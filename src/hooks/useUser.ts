@@ -5,9 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import {
   getUsersByUniversity,
   getUserById,
+  createUser,
   updateUserProfile,
   updateUserStatus,
 } from "@/services/user.service";
+import { getDivisionsByUniversity } from "@/services/division.service";
 import { getFileUrl } from "@/services/storage.service";
 import { UserRole } from "@/types/roles";
 import type { User } from "@/types/user";
@@ -17,17 +19,24 @@ interface UserWithImage extends User {
   fullName: string;
 }
 
+interface Division {
+  idDivision: number;
+  code: string;
+  name: string;
+}
+
 /**
  * Hook personalizado para manejar usuarios:
- * - Carga con control de roles (ADMIN ve todos excepto ADMIN, COORDINATOR ve TUTOR, TEACHER, STUDENT)
+ * - Carga con control de roles (ADMIN ve solo COORDINATORS, COORDINATOR ve TUTOR, TEACHER, STUDENT)
  * - Búsqueda, paginación y filtrado por rol
- * - Edición de usuarios (sin contraseña ni rol)
+ * - Creación y edición de usuarios
  * - Cambio de estado
  * - Manejo de modal y notificaciones
  */
 export function useUser() {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserWithImage[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,18 +68,35 @@ export function useUser() {
   // Filter users based on current user role
   const filterUsersByRole = (allUsers: User[]) => {
     if (user?.role === UserRole.ADMIN) {
-      // ADMIN can see all users except other ADMINs
-      return allUsers.filter(u => u.role !== UserRole.ADMIN);
+      // ADMIN can only see COORDINATORS
+      return allUsers.filter(u => u.role === UserRole.COORDINATOR);
     } else if (user?.role === UserRole.COORDINATOR) {
-      // COORDINATOR can only see TUTOR, TEACHER, and STUDENT
+      // COORDINATOR can only see TUTOR, TEACHER, and STUDENT from their division
       return allUsers.filter(u => 
-        [UserRole.TUTOR, UserRole.TEACHER, UserRole.STUDENT].includes(u.role as UserRole)
+        [UserRole.TUTOR, UserRole.TEACHER, UserRole.STUDENT].includes(u.role as UserRole) &&
+        u.idDivision === user.idDivision // ✅ Solo usuarios de su división
       );
     }
     
     // Default: return empty array for other roles
     return [];
   };
+
+  // Load divisions
+  useEffect(() => {
+    if (!user?.idUniversity) return;
+
+    const loadDivisions = async () => {
+      try {
+        const divisionsData = await getDivisionsByUniversity(user.idUniversity);
+        setDivisions(divisionsData);
+      } catch (err: any) {
+        console.error("Error loading divisions:", err);
+      }
+    };
+
+    loadDivisions();
+  }, [user?.idUniversity]);
 
   // Load users data
   useEffect(() => {
@@ -133,6 +159,59 @@ export function useUser() {
 
   // Get unique roles for filter (only from available users)
   const availableRoles = [...new Set(users.map(u => u.role))].sort();
+
+  // Create new user
+  const handleCreateUser = async (data: Partial<User> & { password?: string }) => {
+    if (!user?.idUniversity) return;
+
+    try {
+      setFormLoading(true);
+
+      // Prepare user data
+      const userData: Partial<User> & { password: string } = {
+        ...data,
+        idUniversity: user.idUniversity,
+        password: data.password || "",
+        status: true,
+      };
+
+      // If coordinator, automatically set division
+      if (user.role === UserRole.COORDINATOR && user.idDivision) {
+        userData.idDivision = user.idDivision;
+      }
+
+      const newUser = await createUser(userData);
+
+      // Load profile image
+      const profileImageUrl = await loadUserImage(newUser.profileImage);
+
+      // Add to users list
+      setUsers(prev => [
+        ...prev,
+        {
+          ...newUser,
+          profileImageUrl,
+          fullName: `${newUser.firstName} ${newUser.lastName}`,
+        },
+      ]);
+
+      setToast({
+        title: "Usuario creado",
+        description: "El usuario fue creado exitosamente.",
+        type: "success",
+      });
+      setIsModalOpen(false);
+    } catch (err: any) {
+      console.error("Error creating user:", err);
+      setToast({
+        title: "Error al crear usuario",
+        description: err?.message || "No se pudo crear el usuario.",
+        type: "error",
+      });
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   // Update user status (activate/deactivate)
   const handleToggleStatus = async (idUser: number, currentStatus: boolean) => {
@@ -203,6 +282,17 @@ export function useUser() {
     }
   };
 
+  // Handle save (create or update)
+  const handleSaveUser = async (data: Partial<User> & { password?: string }, idUser?: number) => {
+    if (idUser) {
+      // Update existing user
+      await handleUpdateUser(idUser, data);
+    } else {
+      // Create new user
+      await handleCreateUser(data);
+    }
+  };
+
   // Change role filter
   const handleRoleChange = (role: string | "all") => {
     setSelectedRole(role);
@@ -229,6 +319,7 @@ export function useUser() {
     filteredUsers,
     totalUsers: filteredUsers.length,
     availableRoles,
+    divisions,
     
     // Pagination
     currentPage,
@@ -245,9 +336,11 @@ export function useUser() {
     isModalOpen,
     setIsModalOpen,
     selectedUser,
+    setSelectedUser,
     formLoading,
     
     // Actions
+    handleSaveUser,
     handleUpdateUser,
     handleEdit,
     handleToggleStatus,
@@ -260,5 +353,8 @@ export function useUser() {
     // User role info (for UI decisions)
     userRole: user?.role,
     canEditUsers: user?.role === UserRole.ADMIN || user?.role === UserRole.COORDINATOR,
+    isAdmin: user?.role === UserRole.ADMIN,
+    isCoordinator: user?.role === UserRole.COORDINATOR,
+    userDivision: user?.idDivision,
   };
 }
